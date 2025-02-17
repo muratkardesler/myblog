@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
+import { ValidLocale } from "@/i18n.config";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -9,19 +10,13 @@ export const metadata: Metadata = {
   description: "Kişisel blog sayfam",
 };
 
-type RootLayoutProps = {
-  children: React.ReactNode
-  params: {
-    lang: string
-  }
-}
-
 export default function RootLayout({
   children,
-  params,
-}: RootLayoutProps) {
+}: {
+  children: React.ReactNode
+}) {
   return (
-    <html lang={params.lang || 'tr'}>
+    <html>
       <body className={inter.className}>{children}</body>
     </html>
   );
