@@ -9,15 +9,19 @@ export const metadata: Metadata = {
   description: "Kişisel blog sayfam",
 };
 
+type RootLayoutProps = {
+  children: React.ReactNode
+  params: {
+    lang: string
+  }
+}
+
 export default function RootLayout({
   children,
   params,
-}: {
-  children: React.ReactNode
-  params: { lang: string }
-}) {
+}: RootLayoutProps) {
   return (
-    <html lang={params.lang}>
+    <html lang={params.lang || 'tr'}>
       <body className={inter.className}>{children}</body>
     </html>
   );
