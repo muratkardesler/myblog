@@ -12,7 +12,7 @@ export default function BlogPage() {
               </a>
             </h2>
             <p className="text-gray-600">
-              Web geliştirme dünyasında kullanılan modern teknikleri ve best practice'leri 
+              Web geliştirme dünyasında kullanılan modern teknikleri ve best practice&apos;leri 
               inceliyoruz.
             </p>
             <div className="text-sm text-gray-500">15 Şubat 2024</div>
