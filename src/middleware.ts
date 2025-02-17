@@ -1,7 +1,6 @@
 import { createMiddlewareClient } from '@supabase/auth-helpers-nextjs'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
-import { defaultLocale, locales } from './i18n.config'
 
 export async function middleware(req: NextRequest) {
   const pathname = req.nextUrl.pathname
@@ -14,21 +13,6 @@ export async function middleware(req: NextRequest) {
     pathname.includes('.')
   ) {
     return NextResponse.next()
-  }
-
-  // Geçerli dil kontrolü
-  const pathnameIsMissingLocale = locales.every(
-    locale => !pathname.startsWith(`/${locale}`)
-  )
-
-  // Eğer pathname'de dil yoksa, varsayılan dile yönlendir
-  if (pathnameIsMissingLocale) {
-    return NextResponse.redirect(
-      new URL(
-        `/${defaultLocale}${pathname === '/' ? '' : pathname}`,
-        req.url
-      )
-    )
   }
 
   const res = NextResponse.next()
