@@ -4,25 +4,9 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import { Metadata } from 'next'
+import { Post, PageParams } from '@/app/types'
 
-interface Post {
-  id: string
-  title: string
-  slug: string
-  content: string
-  featured_image: string | null
-  status: string
-  created_at: string
-  published_at: string | null
-}
-
-type Props = {
-  params: {
-    slug: string
-  }
-}
-
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
+export async function generateMetadata({ params }: PageParams): Promise<Metadata> {
   const supabase = createServerComponentClient({ cookies })
   
   const { data: post } = await supabase
@@ -57,13 +41,13 @@ export async function generateStaticParams() {
   }))
 }
 
-export default async function BlogPostPage({ params }: Props) {
+export default async function BlogPostPage({ params }: PageParams) {
   const supabase = createServerComponentClient({ cookies })
 
   const { data: post } = await supabase
     .from('posts')
     .select('*')
-    .eq('slug', params.slug)
+    .eq('slug', params.slug as string)
     .eq('status', 'published')
     .single()
 
