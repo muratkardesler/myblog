@@ -4,9 +4,8 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import { Metadata } from 'next'
-import { Post, PageParams } from '@/app/types'
 
-export async function generateMetadata({ params }: PageParams): Promise<Metadata> {
+export async function generateMetadata({ params }: any): Promise<Metadata> {
   const supabase = createServerComponentClient({ cookies })
   
   const { data: post } = await supabase
@@ -41,21 +40,19 @@ export async function generateStaticParams() {
   }))
 }
 
-export default async function BlogPostPage({ params }: PageParams) {
+export default async function BlogPostPage({ params }: any) {
   const supabase = createServerComponentClient({ cookies })
 
   const { data: post } = await supabase
     .from('posts')
     .select('*')
-    .eq('slug', params.slug as string)
+    .eq('slug', params.slug)
     .eq('status', 'published')
     .single()
 
   if (!post) {
     notFound()
   }
-
-  const typedPost: Post = post
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-16">
@@ -81,11 +78,11 @@ export default async function BlogPostPage({ params }: PageParams) {
         </Link>
 
         <article className="prose lg:prose-lg max-w-none">
-          <h1 className="text-4xl font-serif mb-4">{typedPost.title}</h1>
+          <h1 className="text-4xl font-serif mb-4">{post.title}</h1>
           
           <div className="text-gray-500 mb-8">
-            <time dateTime={typedPost.published_at || typedPost.created_at}>
-              {new Date(typedPost.published_at || typedPost.created_at).toLocaleDateString('tr-TR', {
+            <time dateTime={post.published_at || post.created_at}>
+              {new Date(post.published_at || post.created_at).toLocaleDateString('tr-TR', {
                 year: 'numeric',
                 month: 'long',
                 day: 'numeric'
@@ -93,18 +90,18 @@ export default async function BlogPostPage({ params }: PageParams) {
             </time>
           </div>
 
-          {typedPost.featured_image && (
+          {post.featured_image && (
             <div className="relative w-full h-96 mb-8">
               <Image
-                src={typedPost.featured_image}
-                alt={typedPost.title}
+                src={post.featured_image}
+                alt={post.title}
                 fill
                 className="object-cover rounded-lg"
               />
             </div>
           )}
 
-          <div className="whitespace-pre-wrap">{typedPost.content}</div>
+          <div className="whitespace-pre-wrap">{post.content}</div>
         </article>
       </div>
     </div>
