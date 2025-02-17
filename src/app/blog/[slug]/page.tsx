@@ -3,6 +3,7 @@ import { cookies } from 'next/headers'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
+import { Metadata } from 'next'
 
 interface Post {
   id: string
@@ -15,11 +16,48 @@ interface Post {
   published_at: string | null
 }
 
-export default async function BlogPostPage({
-  params,
-}: {
-  params: { slug: string }
-}) {
+type Props = {
+  params: {
+    slug: string
+  }
+}
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const supabase = createServerComponentClient({ cookies })
+  
+  const { data: post } = await supabase
+    .from('posts')
+    .select('title, content')
+    .eq('slug', params.slug)
+    .single()
+
+  if (!post) {
+    return {
+      title: 'Blog Yazısı Bulunamadı',
+      description: 'İstediğiniz blog yazısı bulunamadı.'
+    }
+  }
+
+  return {
+    title: post.title,
+    description: post.content.substring(0, 160)
+  }
+}
+
+export async function generateStaticParams() {
+  const supabase = createServerComponentClient({ cookies })
+  
+  const { data: posts } = await supabase
+    .from('posts')
+    .select('slug')
+    .eq('status', 'published')
+
+  return (posts || []).map((post) => ({
+    slug: post.slug,
+  }))
+}
+
+export default async function BlogPostPage({ params }: Props) {
   const supabase = createServerComponentClient({ cookies })
 
   const { data: post } = await supabase
