@@ -10,13 +10,18 @@ export default async function Home({
   const dict = await getDictionary(lang)
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-between p-24">
-      <div className="z-10 max-w-5xl w-full items-center justify-between font-mono text-sm lg:flex">
-        <p className="fixed left-0 top-0 flex w-full justify-center border-b border-gray-300 bg-gradient-to-b from-zinc-200 pb-6 pt-8 backdrop-blur-2xl lg:static lg:w-auto lg:rounded-xl lg:border lg:bg-gray-200 lg:p-4">
-          {dict.navigation.home}
-        </p>
-        <div className="fixed bottom-0 left-0 flex h-48 w-full items-end justify-center bg-gradient-to-t from-white via-white lg:static lg:h-auto lg:w-auto lg:bg-none">
-          <LanguageSwitcher />
+    <main className="min-h-screen p-8">
+      <nav className="flex justify-between items-center mb-8">
+        <h1 className="text-2xl font-bold">{dict.navigation.home}</h1>
+        <LanguageSwitcher />
+      </nav>
+      
+      <div className="max-w-4xl mx-auto">
+        <div className="bg-white rounded-lg shadow-lg p-6">
+          <h2 className="text-xl font-semibold mb-4">{dict.blog.readMore}</h2>
+          <p className="text-gray-600">
+            Hoş geldiniz! Bu benim kişisel blog sayfam.
+          </p>
         </div>
       </div>
     </main>

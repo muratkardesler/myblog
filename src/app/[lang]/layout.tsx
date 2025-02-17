@@ -10,20 +10,12 @@ export const metadata: Metadata = {
   description: "Kişisel blog sayfam",
 }
 
-type LangLayoutProps = {
-  children: React.ReactNode
-  params: {
-    lang: ValidLocale
-  }
-}
-
 export default function LangLayout({
   children,
   params,
-}: LangLayoutProps) {
-  return (
-    <html lang={params.lang}>
-      <body className={inter.className}>{children}</body>
-    </html>
-  )
+}: {
+  children: React.ReactNode
+  params: { lang: ValidLocale }
+}) {
+  return <>{children}</>
 } 
