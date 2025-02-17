@@ -1,6 +1,6 @@
 import { ValidLocale } from "@/i18n.config"
 
-export default async function LangLayout({
+export default function LangLayout({
   children,
   params: { lang },
 }: {
