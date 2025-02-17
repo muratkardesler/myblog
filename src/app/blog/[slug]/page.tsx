@@ -113,7 +113,11 @@ export default async function BlogPostPage({ params }: any) {
               </div>
             )}
 
-            <div className="whitespace-pre-wrap">{post.content}</div>
+            <div 
+              className="prose lg:prose-lg max-w-none"
+              dangerouslySetInnerHTML={{ __html: post.content }}
+            />
+
           </article>
         </div>
       </div>

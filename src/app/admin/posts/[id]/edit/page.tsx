@@ -7,6 +7,7 @@ import Image from 'next/image'
 import RichTextEditor from '@/components/RichTextEditor'
 
 interface BlogPost {
+  id: string
   title: string
   slug: string
   content: string
@@ -15,16 +16,9 @@ interface BlogPost {
   locale: string
 }
 
-export default function NewPostPage() {
-  const [post, setPost] = useState<BlogPost>({
-    title: '',
-    slug: '',
-    content: '',
-    featured_image: null,
-    status: 'draft',
-    locale: 'tr'
-  })
-  const [loading, setLoading] = useState(false)
+export default function EditPostPage({ params }: { params: { id: string } }) {
+  const [post, setPost] = useState<BlogPost | null>(null)
+  const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const router = useRouter()
   const supabase = createClientComponentClient()
@@ -40,8 +34,35 @@ export default function NewPostPage() {
     checkUser()
   }, [router, supabase])
 
+  useEffect(() => {
+    const fetchPost = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('posts')
+          .select('*')
+          .eq('id', params.id)
+          .single()
+
+        if (error) throw error
+        if (!data) throw new Error('Post bulunamadı')
+
+        setPost(data)
+      } catch (error) {
+        if (error instanceof Error) {
+          setError('Blog yazısı yüklenirken bir hata oluştu: ' + error.message)
+        } else {
+          setError('Blog yazısı yüklenirken bir hata oluştu')
+        }
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchPost()
+  }, [params.id, supabase])
+
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files || e.target.files.length === 0) return
+    if (!e.target.files || e.target.files.length === 0 || !post) return
 
     try {
       setLoading(true)
@@ -62,7 +83,7 @@ export default function NewPostPage() {
         .from('images')
         .getPublicUrl(filePath)
 
-      setPost(prev => ({ ...prev, featured_image: publicUrl }))
+      setPost({ ...post, featured_image: publicUrl })
     } catch (error) {
       if (error instanceof Error) {
         setError('Resim yüklenirken bir hata oluştu: ' + error.message)
@@ -76,6 +97,8 @@ export default function NewPostPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!post) return
+
     setLoading(true)
     setError(null)
 
@@ -86,59 +109,57 @@ export default function NewPostPage() {
     }
 
     try {
-      const slug = post.title
-        .toLowerCase()
-        .replace(/ğ/g, 'g')
-        .replace(/ü/g, 'u')
-        .replace(/ş/g, 's')
-        .replace(/ı/g, 'i')
-        .replace(/ö/g, 'o')
-        .replace(/ç/g, 'c')
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/(^-|-$)+/g, '')
-
       const now = new Date().toISOString()
-
-      const postData = {
-        title: post.title,
-        slug,
-        content: post.content,
-        featured_image: post.featured_image,
-        status: post.status,
-        locale: post.locale,
-        created_at: now,
-        updated_at: now,
-        published_at: post.status === 'published' ? now : null
-      }
-
-      console.log('Saving post:', postData)
 
       const { error: submitError } = await supabase
         .from('posts')
-        .insert([postData])
+        .update({
+          title: post.title,
+          content: post.content,
+          featured_image: post.featured_image,
+          status: post.status,
+          locale: post.locale,
+          updated_at: now,
+          published_at: post.status === 'published' ? now : null
+        })
+        .eq('id', post.id)
 
-      if (submitError) {
-        console.error('Submit error:', submitError)
-        throw new Error(submitError.message)
-      }
+      if (submitError) throw submitError
 
       router.push('/admin/dashboard')
     } catch (error) {
       if (error instanceof Error) {
-        setError('Blog yazısı kaydedilirken bir hata oluştu: ' + error.message)
+        setError('Blog yazısı güncellenirken bir hata oluştu: ' + error.message)
       } else {
-        setError('Blog yazısı kaydedilirken bir hata oluştu')
+        setError('Blog yazısı güncellenirken bir hata oluştu')
       }
-      console.error('Error saving post:', error)
     } finally {
       setLoading(false)
     }
   }
 
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    )
+  }
+
+  if (!post) {
+    return (
+      <div className="max-w-4xl mx-auto px-4 py-8">
+        <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded">
+          Blog yazısı bulunamadı.
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
       <div className="bg-white rounded-lg shadow-md p-6">
-        <h1 className="text-2xl font-bold mb-6">Yeni Blog Yazısı</h1>
+        <h1 className="text-2xl font-bold mb-6">Blog Yazısını Düzenle</h1>
 
         {error && (
           <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded mb-6">
@@ -154,7 +175,7 @@ export default function NewPostPage() {
             <input
               type="text"
               value={post.title}
-              onChange={(e) => setPost(prev => ({ ...prev, title: e.target.value }))}
+              onChange={(e) => setPost({ ...post, title: e.target.value })}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
               required
             />
@@ -188,7 +209,7 @@ export default function NewPostPage() {
             </label>
             <RichTextEditor
               content={post.content}
-              onChange={(content) => setPost(prev => ({ ...prev, content }))}
+              onChange={(content) => setPost({ ...post, content })}
             />
           </div>
 
@@ -198,7 +219,7 @@ export default function NewPostPage() {
             </label>
             <select
               value={post.status}
-              onChange={(e) => setPost(prev => ({ ...prev, status: e.target.value }))}
+              onChange={(e) => setPost({ ...post, status: e.target.value })}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="draft">Taslak</option>

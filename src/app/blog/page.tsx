@@ -68,9 +68,10 @@ export default async function BlogPage() {
                 </Link>
               </h2>
               
-              <p className="text-gray-600 mb-4 line-clamp-3">
-                {post.content}
-              </p>
+              <div 
+                className="text-gray-600 mb-4 line-clamp-3 prose"
+                dangerouslySetInnerHTML={{ __html: post.content }}
+              />
               
               <Link 
                 href={`/blog/${post.slug}`} 
