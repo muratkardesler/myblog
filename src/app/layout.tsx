@@ -1,14 +1,13 @@
-import type { Metadata } from "next";
-import { Inter } from "next/font/google";
-import "./globals.css";
-import { ValidLocale } from "@/i18n.config";
+import type { Metadata } from "next"
+import { Inter } from "next/font/google"
+import "./globals.css"
 
-const inter = Inter({ subsets: ["latin"] });
+const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
   title: "Murat Kardeşler Blog",
   description: "Kişisel blog sayfam",
-};
+}
 
 export default function RootLayout({
   children,
@@ -19,5 +18,5 @@ export default function RootLayout({
     <html>
       <body className={inter.className}>{children}</body>
     </html>
-  );
+  )
 }

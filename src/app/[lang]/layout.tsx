@@ -1,21 +1,15 @@
-import type { Metadata } from "next"
-import { Inter } from "next/font/google"
-import "../globals.css"
 import { ValidLocale } from "@/i18n.config"
 
-const inter = Inter({ subsets: ["latin"] })
-
-export const metadata: Metadata = {
-  title: "Murat Kardeşler Blog",
-  description: "Kişisel blog sayfam",
-}
-
-export default function LangLayout({
+export default async function LangLayout({
   children,
-  params,
+  params: { lang },
 }: {
   children: React.ReactNode
   params: { lang: ValidLocale }
 }) {
-  return <>{children}</>
+  return (
+    <div className="min-h-screen" lang={lang}>
+      {children}
+    </div>
+  )
 } 

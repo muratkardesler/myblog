@@ -1,16 +1,36 @@
 import { createMiddlewareClient } from '@supabase/auth-helpers-nextjs'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
-import { defaultLocale, locales, ValidLocale } from './i18n.config'
-
-// Geçerli dil kontrolü
-function getValidLocale(pathname: string): ValidLocale {
-  const segments = pathname.split('/')
-  const langCode = segments[1]
-  return locales.includes(langCode as ValidLocale) ? (langCode as ValidLocale) : defaultLocale
-}
+import { defaultLocale, locales } from './i18n.config'
 
 export async function middleware(req: NextRequest) {
+  const pathname = req.nextUrl.pathname
+
+  // Statik dosyaları ve API rotalarını yoksay
+  if (
+    pathname.startsWith('/_next') ||
+    pathname.startsWith('/api') ||
+    pathname.startsWith('/static') ||
+    pathname.includes('.')
+  ) {
+    return NextResponse.next()
+  }
+
+  // Geçerli dil kontrolü
+  const pathnameIsMissingLocale = locales.every(
+    locale => !pathname.startsWith(`/${locale}`)
+  )
+
+  // Eğer pathname'de dil yoksa, varsayılan dile yönlendir
+  if (pathnameIsMissingLocale) {
+    return NextResponse.redirect(
+      new URL(
+        `/${defaultLocale}${pathname === '/' ? '' : pathname}`,
+        req.url
+      )
+    )
+  }
+
   const res = NextResponse.next()
   const supabase = createMiddlewareClient({ req, res })
 
@@ -18,37 +38,18 @@ export async function middleware(req: NextRequest) {
     data: { session },
   } = await supabase.auth.getSession()
 
-  // URL path kontrolü
-  const pathname = req.nextUrl.pathname
-
   // Admin sayfalarını koruma
-  if (pathname.startsWith('/admin')) {
+  if (pathname.includes('/admin')) {
     if (!session) {
       return NextResponse.redirect(new URL('/admin', req.url))
     }
-
-    // Burada ileride admin rolü kontrolü de ekleyebiliriz
-    // const { data: { user } } = await supabase.auth.getUser()
-    // if (user?.role !== 'admin') { ... }
-  }
-
-  // Dil yönlendirmesi
-  if (
-    pathname === '/' || 
-    (pathname.startsWith('/') && !pathname.startsWith(`/${defaultLocale}/`) && !pathname.startsWith('/admin'))
-  ) {
-    const locale = getValidLocale(pathname)
-    return NextResponse.redirect(
-      new URL(
-        `/${locale}${pathname === '/' ? '' : pathname}`,
-        req.url
-      )
-    )
   }
 
   return res
 }
 
 export const config = {
-  matcher: ['/((?!api|_next/static|_next/image|favicon.ico).*)']
+  matcher: [
+    '/((?!api|_next/static|_next/image|favicon.ico).*)',
+  ],
 } 

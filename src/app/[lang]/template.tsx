@@ -1,15 +1,11 @@
 import { ValidLocale } from "@/i18n.config"
 
-export default function LangTemplate({
+export default async function LangTemplate({
   children,
   params,
 }: {
   children: React.ReactNode
   params: { lang: ValidLocale }
 }) {
-  return (
-    <div lang={params.lang}>
-      {children}
-    </div>
-  )
+  return children
 } 
