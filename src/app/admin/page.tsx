@@ -37,7 +37,7 @@ export default function AdminLoginPage() {
       if (error) throw error
 
       router.push('/admin/dashboard')
-    } catch (err) {
+    } catch (error) {
       setError('Giriş başarısız. Lütfen bilgilerinizi kontrol edin.')
     } finally {
       setLoading(false)

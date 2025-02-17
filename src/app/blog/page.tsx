@@ -2,6 +2,7 @@ import { createServerComponentClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import Link from 'next/link'
 import { FaCalendar } from 'react-icons/fa'
+import Image from 'next/image'
 
 interface Post {
   id: string
@@ -25,12 +26,14 @@ export default async function BlogPage() {
     .eq('status', 'published')
     .order('published_at', { ascending: false })
 
+  const typedPosts: Post[] = posts || []
+
   return (
     <div className="max-w-6xl mx-auto px-4 py-16">
       <h1 className="text-4xl font-serif mb-12 text-center">Blog Yazılarım</h1>
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-        {posts?.map((post, index) => (
+        {typedPosts.map((post, index) => (
           <article 
             key={post.id} 
             className={`bg-white rounded-lg shadow-md overflow-hidden hover:shadow-xl transition-all transform hover:-translate-y-1 border border-gray-100 ${
@@ -39,10 +42,11 @@ export default async function BlogPage() {
           >
             {post.featured_image && (
               <div className="relative h-48 overflow-hidden">
-                <img
+                <Image
                   src={post.featured_image}
                   alt={post.title}
-                  className="w-full h-full object-cover"
+                  fill
+                  className="object-cover"
                 />
               </div>
             )}
@@ -81,7 +85,7 @@ export default async function BlogPage() {
           </article>
         ))}
 
-        {!posts?.length && (
+        {!typedPosts.length && (
           <div className="col-span-full text-center py-12 bg-white rounded-xl shadow-sm border border-gray-100">
             <svg
               className="mx-auto h-12 w-12 text-gray-400 mb-4"

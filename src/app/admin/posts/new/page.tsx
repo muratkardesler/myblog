@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { useRouter } from 'next/navigation'
+import Image from 'next/image'
 
 interface BlogPost {
   title: string
@@ -45,7 +46,7 @@ export default function NewPostPage() {
         .getPublicUrl(filePath)
 
       setPost(prev => ({ ...prev, featured_image: publicUrl }))
-    } catch (err) {
+    } catch (error) {
       setError('Resim yüklenirken bir hata oluştu.')
     }
   }
@@ -56,7 +57,6 @@ export default function NewPostPage() {
     setError(null)
 
     try {
-      // Slug oluştur
       const slug = post.title
         .toLowerCase()
         .replace(/ğ/g, 'g')
@@ -77,7 +77,7 @@ export default function NewPostPage() {
       if (submitError) throw submitError
 
       router.push('/admin/dashboard')
-    } catch (err) {
+    } catch (error) {
       setError('Blog yazısı kaydedilirken bir hata oluştu.')
     } finally {
       setLoading(false)
@@ -120,11 +120,14 @@ export default function NewPostPage() {
               className="w-full"
             />
             {post.featured_image && (
-              <img
-                src={post.featured_image}
-                alt="Öne çıkan görsel"
-                className="mt-2 max-h-40 object-cover rounded"
-              />
+              <div className="relative mt-2 h-40 w-full">
+                <Image
+                  src={post.featured_image}
+                  alt="Öne çıkan görsel"
+                  fill
+                  className="object-cover rounded"
+                />
+              </div>
             )}
           </div>
 

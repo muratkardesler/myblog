@@ -2,6 +2,7 @@ import { createServerComponentClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
+import Image from 'next/image'
 
 interface Post {
   id: string
@@ -36,6 +37,8 @@ export default async function BlogPostPage({ params }: Props) {
     notFound()
   }
 
+  const typedPost: Post = post
+
   return (
     <div className="max-w-6xl mx-auto px-4 py-16">
       <div className="max-w-3xl mx-auto">
@@ -60,11 +63,11 @@ export default async function BlogPostPage({ params }: Props) {
         </Link>
 
         <article className="prose lg:prose-lg max-w-none">
-          <h1 className="text-4xl font-serif mb-4">{post.title}</h1>
+          <h1 className="text-4xl font-serif mb-4">{typedPost.title}</h1>
           
           <div className="text-gray-500 mb-8">
-            <time dateTime={post.published_at || post.created_at}>
-              {new Date(post.published_at || post.created_at).toLocaleDateString('tr-TR', {
+            <time dateTime={typedPost.published_at || typedPost.created_at}>
+              {new Date(typedPost.published_at || typedPost.created_at).toLocaleDateString('tr-TR', {
                 year: 'numeric',
                 month: 'long',
                 day: 'numeric'
@@ -72,15 +75,18 @@ export default async function BlogPostPage({ params }: Props) {
             </time>
           </div>
 
-          {post.featured_image && (
-            <img
-              src={post.featured_image}
-              alt={post.title}
-              className="w-full h-96 object-cover rounded-lg mb-8"
-            />
+          {typedPost.featured_image && (
+            <div className="relative w-full h-96 mb-8">
+              <Image
+                src={typedPost.featured_image}
+                alt={typedPost.title}
+                fill
+                className="object-cover rounded-lg"
+              />
+            </div>
           )}
 
-          <div className="whitespace-pre-wrap">{post.content}</div>
+          <div className="whitespace-pre-wrap">{typedPost.content}</div>
         </article>
       </div>
     </div>
