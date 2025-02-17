@@ -15,15 +15,14 @@ interface Post {
   published_at: string | null
 }
 
-interface Props {
-  params: {
-    slug: string
-  }
+type PageProps = {
+  params: { slug: string }
+  searchParams: { [key: string]: string | string[] | undefined }
 }
 
 export const revalidate = 60
 
-export default async function BlogPostPage({ params }: Props) {
+export default async function BlogPostPage({ params, searchParams }: PageProps) {
   const supabase = createServerComponentClient({ cookies })
 
   const { data: post } = await supabase
