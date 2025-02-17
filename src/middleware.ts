@@ -1,13 +1,13 @@
 import { createMiddlewareClient } from '@supabase/auth-helpers-nextjs'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
-import { defaultLocale, locales } from './i18n.config'
+import { defaultLocale, locales, ValidLocale } from './i18n.config'
 
 // Geçerli dil kontrolü
-function getValidLocale(pathname: string) {
+function getValidLocale(pathname: string): ValidLocale {
   const segments = pathname.split('/')
   const langCode = segments[1]
-  return locales.includes(langCode as any) ? langCode : defaultLocale
+  return locales.includes(langCode as ValidLocale) ? (langCode as ValidLocale) : defaultLocale
 }
 
 export async function middleware(req: NextRequest) {
