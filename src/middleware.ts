@@ -3,7 +3,9 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
 export async function middleware(req: NextRequest) {
-  const pathname = req.nextUrl.pathname
+  const res = NextResponse.next()
+  const supabase = createMiddlewareClient({ req, res })
+  const { pathname } = req.nextUrl
 
   // Statik dosyaları ve API rotalarını yoksay
   if (
@@ -12,18 +14,25 @@ export async function middleware(req: NextRequest) {
     pathname.startsWith('/static') ||
     pathname.includes('.')
   ) {
-    return NextResponse.next()
+    return res
   }
-
-  const res = NextResponse.next()
-  const supabase = createMiddlewareClient({ req, res })
 
   const {
     data: { session },
   } = await supabase.auth.getSession()
 
   // Admin sayfalarını koruma
-  if (pathname.includes('/admin')) {
+  if (pathname.startsWith('/admin')) {
+    // Admin giriş sayfasına özel kontrol
+    if (pathname === '/admin') {
+      // Eğer kullanıcı zaten giriş yapmışsa dashboard'a yönlendir
+      if (session) {
+        return NextResponse.redirect(new URL('/admin/dashboard', req.url))
+      }
+      return res
+    }
+
+    // Diğer admin sayfaları için auth kontrolü
     if (!session) {
       return NextResponse.redirect(new URL('/admin', req.url))
     }
