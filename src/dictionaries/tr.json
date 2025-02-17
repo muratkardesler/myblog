@@ -1,0 +1,30 @@
+{
+  "navigation": {
+    "home": "Ana Sayfa",
+    "blog": "Blog",
+    "about": "Hakkımda",
+    "contact": "İletişim"
+  },
+  "admin": {
+    "dashboard": "Yönetim Paneli",
+    "newPost": "Yeni Yazı",
+    "editPost": "Yazıyı Düzenle",
+    "posts": "Yazılar",
+    "draft": "Taslak",
+    "published": "Yayında",
+    "save": "Kaydet",
+    "cancel": "İptal",
+    "delete": "Sil",
+    "title": "Başlık",
+    "content": "İçerik",
+    "status": "Durum",
+    "date": "Tarih",
+    "actions": "İşlemler"
+  },
+  "blog": {
+    "readMore": "Devamını Oku",
+    "backToList": "Listeye Dön",
+    "publishedAt": "Yayın Tarihi",
+    "author": "Yazar"
+  }
+} 
