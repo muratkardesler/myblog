@@ -5,7 +5,6 @@ import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import RichTextEditor from '@/components/RichTextEditor'
-import { PageParams } from '@/app/types'
 
 interface BlogPost {
   id: string
@@ -17,7 +16,13 @@ interface BlogPost {
   locale: string
 }
 
-export default function EditPostPage({ params }: PageParams) {
+interface PageProps {
+  params: {
+    id: string
+  }
+}
+
+export default function EditPostPage({ params }: PageProps) {
   const [post, setPost] = useState<BlogPost | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
