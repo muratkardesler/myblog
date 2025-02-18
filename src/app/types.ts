@@ -9,10 +9,7 @@ export interface Post {
   published_at: string | null
 }
 
-export interface PageParams {
-  params: {
-    id?: string
-    slug?: string
-  }
+export interface PageProps<T = any> {
+  params: T
   searchParams?: { [key: string]: string | string[] | undefined }
 } 
