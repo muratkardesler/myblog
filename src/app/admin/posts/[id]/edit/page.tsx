@@ -1,19 +1,18 @@
 import { Metadata } from 'next'
-import { PageProps } from '@/app/types'
 import EditPostForm from './EditPostForm'
 
 export const metadata: Metadata = {
   title: 'Blog Yazısı Düzenle',
 }
 
-type EditPageParams = {
-  id: string
+type PageParams = {
+  params: {
+    id: string
+  }
 }
 
-export default async function Page({ params }: PageProps<EditPageParams>) {
-  return (
-    <>
-      <EditPostForm postId={params.id} />
-    </>
-  )
-} 
+async function Page(props: PageParams) {
+  return <EditPostForm postId={props.params.id} />
+}
+
+export default Page 

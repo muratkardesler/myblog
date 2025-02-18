@@ -1,20 +1,21 @@
-import type { Metadata } from 'next'
+import { Metadata } from 'next'
 import { createServerComponentClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 
-type Props = {
-  params: { slug: string }
-  searchParams?: { [key: string]: string | string[] | undefined }
-}
-
 export const metadata: Metadata = {
   title: 'Blog Yazısı',
 }
 
-export default async function Page(props: Props) {
+type PageParams = {
+  params: {
+    slug: string
+  }
+}
+
+async function Page(props: PageParams) {
   try {
     const cookieStore = cookies()
     const supabase = createServerComponentClient({ cookies: () => cookieStore })
@@ -97,4 +98,7 @@ export default async function Page(props: Props) {
     console.error('Error in BlogPostPage:', error)
     notFound()
   }
+}
+
+export default Page 
 } 
