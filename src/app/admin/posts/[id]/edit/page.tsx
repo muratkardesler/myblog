@@ -3,12 +3,9 @@ import { Metadata } from 'next'
 import { createServerComponentClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 
-type Props = {
-  params: { id: string }
-  searchParams: { [key: string]: string | string[] | undefined }
-}
+export const dynamic = 'force-dynamic'
 
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
+export async function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {
   const supabase = createServerComponentClient({ cookies })
   
   const { data: post } = await supabase
@@ -22,6 +19,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 }
 
-export default function EditPostPage({ params }: Props) {
-  return <EditPostForm postId={params.id} />
+interface PageProps {
+  params: { id: string }
+}
+
+export default async function EditPostPage(props: PageProps) {
+  return <EditPostForm postId={props.params.id} />
 } 
