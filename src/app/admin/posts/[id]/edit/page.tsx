@@ -5,13 +5,18 @@ import { cookies } from 'next/headers'
 
 export const dynamic = 'force-dynamic'
 
-export async function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {
+interface PageProps {
+  params: { id: string }
+  searchParams: { [key: string]: string | string[] | undefined }
+}
+
+export async function generateMetadata(props: PageProps): Promise<Metadata> {
   const supabase = createServerComponentClient({ cookies })
   
   const { data: post } = await supabase
     .from('posts')
     .select('title')
-    .eq('id', params.id)
+    .eq('id', props.params.id)
     .single()
 
   return {
@@ -19,10 +24,6 @@ export async function generateMetadata({ params }: { params: { id: string } }): 
   }
 }
 
-interface PageProps {
-  params: { id: string }
-}
-
-export default async function EditPostPage(props: PageProps) {
+export default function Page(props: PageProps) {
   return <EditPostForm postId={props.params.id} />
 } 

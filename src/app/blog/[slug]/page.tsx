@@ -8,18 +8,18 @@ import { Metadata } from 'next'
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
-type Props = {
+interface PageProps {
   params: { slug: string }
   searchParams: { [key: string]: string | string[] | undefined }
 }
 
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
+export async function generateMetadata(props: PageProps): Promise<Metadata> {
   const supabase = createServerComponentClient({ cookies })
   
   const { data: post } = await supabase
     .from('posts')
     .select('title, content')
-    .eq('slug', params.slug)
+    .eq('slug', props.params.slug)
     .single()
 
   if (!post) {
@@ -48,7 +48,9 @@ export async function generateStaticParams() {
   }))
 }
 
-export default async function BlogPostPage({ params }: Props) {
+export default async function Page(props: PageProps) {
+  const { params } = props
+
   try {
     const cookieStore = cookies()
     const supabase = createServerComponentClient({ cookies: () => cookieStore })
