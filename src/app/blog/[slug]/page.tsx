@@ -8,7 +8,12 @@ import { Metadata } from 'next'
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
-export async function generateMetadata({ params }: any): Promise<Metadata> {
+type Props = {
+  params: { slug: string }
+  searchParams: { [key: string]: string | string[] | undefined }
+}
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const supabase = createServerComponentClient({ cookies })
   
   const { data: post } = await supabase
@@ -43,7 +48,7 @@ export async function generateStaticParams() {
   }))
 }
 
-export default async function BlogPostPage({ params }: any) {
+export default async function BlogPostPage({ params }: Props) {
   try {
     const cookieStore = cookies()
     const supabase = createServerComponentClient({ cookies: () => cookieStore })
