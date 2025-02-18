@@ -101,4 +101,3 @@ async function Page(props: PageParams) {
 }
 
 export default Page 
-} 
