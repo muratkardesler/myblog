@@ -10,7 +10,7 @@ export const metadata: Metadata = {
   title: 'Blog Yazısı',
 }
 
-async function Page({ params }: PageProps) {
+async function Page({ params }: Awaited<PageProps>) {
   try {
     const cookieStore = cookies()
     const supabase = createServerComponentClient({ cookies: () => cookieStore })
@@ -18,7 +18,7 @@ async function Page({ params }: PageProps) {
     const { data: post, error } = await supabase
       .from('posts')
       .select('*')
-      .eq('slug', params.slug)
+      .eq('slug', params.slug!)
       .eq('status', 'published')
       .single()
 
