@@ -9,10 +9,16 @@ export interface Post {
   published_at: string | null
 }
 
+export interface PageParams {
+  id?: string
+  slug?: string
+}
+
+export interface SearchParams {
+  [key: string]: string | string[] | undefined
+}
+
 export interface PageProps {
-  params: {
-    id?: string
-    slug?: string
-  }
-  searchParams?: { [key: string]: string | string[] | undefined }
+  params: Promise<PageParams>
+  searchParams?: Promise<SearchParams>
 } 

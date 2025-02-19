@@ -18,8 +18,9 @@ interface Post {
 export const revalidate = 60 // Her 60 saniyede bir yeniden oluştur
 
 export default async function BlogPage() {
-  const supabase = createServerComponentClient({ 
-    cookies
+  const cookieStore = cookies()
+  const supabase = createServerComponentClient({
+    cookies: () => cookieStore
   })
 
   const { data: posts } = await supabase

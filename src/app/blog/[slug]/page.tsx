@@ -4,7 +4,7 @@ import { cookies } from 'next/headers'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
-import { PageProps } from '../../types'
+import { PageProps } from '@/app/types'
 
 export const metadata: Metadata = {
   title: 'Blog Yazısı',
@@ -12,15 +12,16 @@ export const metadata: Metadata = {
 
 async function Page({ params }: PageProps) {
   try {
+    const resolvedParams = await params
     const cookieStore = cookies()
-    const supabase = createServerComponentClient({ 
-      cookies: () => new Promise((resolve) => resolve(cookieStore))
+    const supabase = createServerComponentClient({
+      cookies: () => cookieStore
     })
 
     const { data: post, error } = await supabase
       .from('posts')
       .select('*')
-      .eq('slug', params.slug)
+      .eq('slug', resolvedParams.slug)
       .eq('status', 'published')
       .single()
 
