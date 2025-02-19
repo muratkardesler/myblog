@@ -4,18 +4,13 @@ import { cookies } from 'next/headers'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
+import { PageProps } from '../../types'
 
 export const metadata: Metadata = {
   title: 'Blog Yazısı',
 }
 
-type PageParams = {
-  params: {
-    slug: string
-  }
-}
-
-async function Page(props: PageParams) {
+async function Page({ params }: PageProps) {
   try {
     const cookieStore = cookies()
     const supabase = createServerComponentClient({ cookies: () => cookieStore })
@@ -23,7 +18,7 @@ async function Page(props: PageParams) {
     const { data: post, error } = await supabase
       .from('posts')
       .select('*')
-      .eq('slug', props.params.slug)
+      .eq('slug', params.slug)
       .eq('status', 'published')
       .single()
 

@@ -11,7 +11,8 @@ export interface Post {
 
 export interface PageProps {
   params: {
-    id: string
+    id?: string
+    slug?: string
   }
   searchParams?: { [key: string]: string | string[] | undefined }
 } 
