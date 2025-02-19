@@ -1,5 +1,5 @@
 import EditPostClient from './EditPostClient'
-import { PageProps } from '../../../types'
+import { PageProps } from '../../../../types'
 
 export const metadata = {
   title: 'Blog Yazısı Düzenle'

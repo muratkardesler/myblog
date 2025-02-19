@@ -18,7 +18,9 @@ interface Post {
 export const revalidate = 60 // Her 60 saniyede bir yeniden oluştur
 
 export default async function BlogPage() {
-  const supabase = createServerComponentClient({ cookies })
+  const supabase = createServerComponentClient({ 
+    cookies
+  })
 
   const { data: posts } = await supabase
     .from('posts')
@@ -46,7 +48,9 @@ export default async function BlogPage() {
                   src={post.featured_image}
                   alt={post.title}
                   fill
+                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                   className="object-cover"
+                  priority
                 />
               </div>
             )}

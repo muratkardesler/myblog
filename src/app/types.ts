@@ -10,9 +10,9 @@ export interface Post {
 }
 
 export interface PageProps {
-  params: Promise<{
+  params: {
     id?: string
     slug?: string
-  }>
-  searchParams?: Promise<{ [key: string]: string | string[] | undefined }>
+  }
+  searchParams?: { [key: string]: string | string[] | undefined }
 } 
