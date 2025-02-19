@@ -5,6 +5,7 @@ import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import RichTextEditor from '@/components/RichTextEditor'
+import DeletePostButton from '../DeletePostButton'
 
 interface BlogPost {
   id: string
@@ -231,7 +232,7 @@ export default function EditPostForm({ postId }: EditPostFormProps) {
             </select>
           </div>
 
-          <div className="flex justify-end space-x-4">
+          <div className="flex justify-between space-x-4">
             <button
               type="button"
               onClick={() => router.push('/admin/dashboard')}
@@ -239,13 +240,16 @@ export default function EditPostForm({ postId }: EditPostFormProps) {
             >
               İptal
             </button>
-            <button
-              type="submit"
-              disabled={loading}
-              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
-            >
-              {loading ? 'Kaydediliyor...' : 'Kaydet'}
-            </button>
+            <div className="flex space-x-4">
+              <DeletePostButton postId={post.id} postTitle={post.title} />
+              <button
+                type="submit"
+                disabled={loading}
+                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+              >
+                {loading ? 'Kaydediliyor...' : 'Kaydet'}
+              </button>
+            </div>
           </div>
         </form>
       </div>

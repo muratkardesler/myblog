@@ -1,198 +1,97 @@
-'use client'
-
-import { useEffect, useState } from 'react'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
-import { useRouter } from 'next/navigation'
+import { createServerComponentClient } from '@supabase/auth-helpers-nextjs'
+import { cookies } from 'next/headers'
 import Link from 'next/link'
+import PostActions from './PostActions'
 
-interface Post {
-  id: string
-  title: string
-  status: string
-  created_at: string
-  published_at: string | null
+export const metadata = {
+  title: 'Admin Dashboard'
 }
 
-export default function DashboardPage() {
-  const [posts, setPosts] = useState<Post[]>([])
-  const [loading, setLoading] = useState(true)
-  const router = useRouter()
-  const supabase = createClientComponentClient()
+export default async function AdminDashboard() {
+  const supabase = createServerComponentClient({ cookies })
 
-  useEffect(() => {
-    const checkUser = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) {
-        router.push('/admin')
-      }
-    }
-
-    checkUser()
-  }, [router, supabase])
-
-  useEffect(() => {
-    const fetchPosts = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('posts')
-          .select('id, title, status, created_at, published_at')
-          .order('created_at', { ascending: false })
-
-        if (error) throw error
-        if (data) setPosts(data)
-      } catch (err) {
-        console.error('Error fetching posts:', err)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchPosts()
-  }, [supabase])
-
-  const handleStatusChange = async (postId: string, newStatus: 'draft' | 'published') => {
-    try {
-      const { error } = await supabase
-        .from('posts')
-        .update({
-          status: newStatus,
-          published_at: newStatus === 'published' ? new Date().toISOString() : null
-        })
-        .eq('id', postId)
-
-      if (error) throw error
-
-      setPosts(posts.map(post =>
-        post.id === postId
-          ? { ...post, status: newStatus, published_at: newStatus === 'published' ? new Date().toISOString() : null }
-          : post
-      ))
-    } catch (err) {
-      console.error('Error updating post status:', err)
-    }
-  }
-
-  const handleDelete = async (postId: string) => {
-    if (!window.confirm('Bu yazıyı silmek istediğinizden emin misiniz?')) return
-
-    try {
-      const { error } = await supabase
-        .from('posts')
-        .delete()
-        .eq('id', postId)
-
-      if (error) throw error
-
-      setPosts(posts.filter(post => post.id !== postId))
-    } catch (err) {
-      console.error('Error deleting post:', err)
-    }
-  }
-
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
-    )
-  }
+  const { data: posts } = await supabase
+    .from('posts')
+    .select('*')
+    .order('created_at', { ascending: false })
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold">Admin Dashboard</h1>
+        <h1 className="text-2xl font-bold">Admin Dashboard</h1>
         <Link
           href="/admin/posts/new"
-          className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
         >
-          <svg
-            className="w-4 h-4 mr-2"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M12 4v16m8-8H4"
-            />
+          <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
           </svg>
           Yeni Yazı
         </Link>
       </div>
 
-      <div className="bg-white rounded-lg shadow-md">
+      <div className="bg-white rounded-lg shadow-md overflow-hidden">
         <div className="p-6">
           <h2 className="text-xl font-semibold mb-4">Blog Yazıları</h2>
-          {posts.length > 0 ? (
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead>
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Başlık
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Durum
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Tarih
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      İşlemler
-                    </th>
+          
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead>
+                <tr className="bg-gray-50">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    BAŞLIK
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    DURUM
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    TARİH
+                  </th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    İŞLEMLER
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {posts?.map((post) => (
+                  <tr key={post.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-medium text-gray-900">
+                        {post.title}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        post.status === 'published' 
+                          ? 'bg-green-100 text-green-800' 
+                          : 'bg-yellow-100 text-yellow-800'
+                      }`}>
+                        {post.status === 'published' ? 'Yayında' : 'Taslak'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {new Date(post.created_at).toLocaleDateString('tr-TR', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                      })}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right">
+                      <PostActions postId={post.id} postTitle={post.title} />
+                    </td>
                   </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {posts.map((post) => (
-                    <tr key={post.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">
-                          {post.title}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <select
-                          value={post.status}
-                          onChange={(e) => handleStatusChange(post.id, e.target.value as 'draft' | 'published')}
-                          className="text-sm rounded-full px-3 py-1 border focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        >
-                          <option value="draft">Taslak</option>
-                          <option value="published">Yayında</option>
-                        </select>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-500">
-                          {new Date(post.published_at || post.created_at).toLocaleDateString('tr-TR')}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">
-                        <div className="flex space-x-3">
-                          <Link
-                            href={`/admin/posts/${post.id}/edit`}
-                            className="text-blue-600 hover:text-blue-800"
-                          >
-                            Düzenle
-                          </Link>
-                          <button
-                            onClick={() => handleDelete(post.id)}
-                            className="text-red-600 hover:text-red-800"
-                          >
-                            Sil
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <p className="text-gray-500 text-center py-4">
-              Henüz blog yazısı bulunmuyor.
-            </p>
-          )}
+                ))}
+
+                {!posts?.length && (
+                  <tr>
+                    <td colSpan={4} className="px-6 py-4 text-center text-sm text-gray-500">
+                      Henüz blog yazısı bulunmuyor.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>
