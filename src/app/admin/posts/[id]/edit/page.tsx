@@ -3,23 +3,21 @@ import EditPostForm from './EditPostForm'
 import { createServerComponentClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 
-type PageParams = {
+interface PageParams {
   id: string
 }
 
-type Props = {
+interface Props {
   params: PageParams
-  searchParams: { [key: string]: string | string[] | undefined }
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { id } = params
   const supabase = createServerComponentClient({ cookies })
   
   const { data: post } = await supabase
     .from('posts')
     .select('title')
-    .eq('id', id)
+    .eq('id', params.id)
     .single()
 
   return {
@@ -27,7 +25,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 }
 
-export default async function Page({ params }: Props) {
-  const { id } = params
-  return <EditPostForm postId={id} />
+export default function Page({ params }: Props) {
+  return <EditPostForm postId={params.id} />
 } 
