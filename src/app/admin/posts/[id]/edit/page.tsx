@@ -1,15 +1,10 @@
 import EditPostClient from './EditPostClient'
-
-interface Props {
-  params: {
-    id: string
-  }
-}
+import { PageProps } from '@/app/types'
 
 export const metadata = {
   title: 'Blog Yazısı Düzenle'
 }
 
-export default function Page({ params }: Props) {
+export default function Page({ params }: PageProps) {
   return <EditPostClient params={params} />
 } 
