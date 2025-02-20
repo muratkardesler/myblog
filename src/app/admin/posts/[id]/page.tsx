@@ -1,29 +1,30 @@
-'use client'
+'use client';
 
-import { useState, useEffect, useRef } from 'react'
-import { useRouter } from 'next/navigation'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
-import { Category } from '@/lib/types'
-import Link from 'next/link'
-import toast from 'react-hot-toast'
-import Image from 'next/image'
+import { useState, useEffect, useRef } from 'react';
+import { useRouter, useParams } from 'next/navigation';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { Post, Category } from '@/lib/types';
+import Link from 'next/link';
+import toast from 'react-hot-toast';
+import Image from 'next/image';
 
 interface PostFormData {
-  title: string
-  content: string
-  featured_image: string
-  category_id: string
-  status: 'draft' | 'published'
-  is_featured: boolean
+  title: string;
+  content: string;
+  featured_image: string;
+  category_id: string;
+  status: 'draft' | 'published';
+  is_featured: boolean;
 }
 
-export default function NewPostPage() {
-  const router = useRouter()
-  const supabase = createClientComponentClient()
-  const [loading, setLoading] = useState(false)
-  const [categories, setCategories] = useState<Category[]>([])
-  const [imageUploading, setImageUploading] = useState(false)
-  const contentRef = useRef<HTMLTextAreaElement>(null)
+export default function EditPostPage() {
+  const router = useRouter();
+  const params = useParams();
+  const supabase = createClientComponentClient();
+  const [loading, setLoading] = useState(false);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [imageUploading, setImageUploading] = useState(false);
+  const contentRef = useRef<HTMLTextAreaElement>(null);
   const [formData, setFormData] = useState<PostFormData>({
     title: '',
     content: '',
@@ -31,141 +32,158 @@ export default function NewPostPage() {
     category_id: '',
     status: 'draft',
     is_featured: false
-  })
+  });
 
   useEffect(() => {
-    loadCategories()
-  }, [])
+    if (params.id) {
+      loadPost();
+      loadCategories();
+    }
+  }, [params.id]);
+
+  const loadPost = async () => {
+    if (!params.id) return;
+    
+    try {
+      const { data: post, error } = await supabase
+        .from('posts')
+        .select('*')
+        .eq('id', params.id)
+        .single();
+
+      if (error) {
+        toast.error('Yazı yüklenirken bir hata oluştu.');
+        return;
+      }
+
+      if (post) {
+        setFormData({
+          title: post.title || '',
+          content: post.content || '',
+          featured_image: post.featured_image || '',
+          category_id: post.category_id || '',
+          status: post.status || 'draft',
+          is_featured: post.is_featured || false
+        });
+      }
+    } catch (error) {
+      console.error('Error loading post:', error);
+      toast.error('Yazı yüklenirken bir hata oluştu.');
+    }
+  };
 
   const loadCategories = async () => {
     const { data, error } = await supabase
       .from('categories')
       .select('*')
-      .order('name')
+      .order('name');
 
     if (error) {
-      toast.error('Kategoriler yüklenirken bir hata oluştu.')
-      return
+      toast.error('Kategoriler yüklenirken bir hata oluştu.');
+      return;
     }
 
-    setCategories(data || [])
-  }
+    setCategories(data || []);
+  };
 
   const handleImageUpload = async (file: File) => {
     try {
-      setImageUploading(true)
+      setImageUploading(true);
       
-      const fileExt = file.name.split('.').pop()
-      const fileName = `${Math.random()}.${fileExt}`
-      const filePath = `blog-images/${fileName}`
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Math.random()}.${fileExt}`;
+      const filePath = `blog-images/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
         .from('images')
-        .upload(filePath, file)
+        .upload(filePath, file);
 
-      if (uploadError) throw uploadError
+      if (uploadError) throw uploadError;
 
       const { data: { publicUrl } } = supabase.storage
         .from('images')
-        .getPublicUrl(filePath)
+        .getPublicUrl(filePath);
 
-      setFormData(prev => ({ ...prev, featured_image: publicUrl }))
-      toast.success('Resim başarıyla yüklendi.')
+      setFormData(prev => ({ ...prev, featured_image: publicUrl }));
+      toast.success('Resim başarıyla yüklendi.');
     } catch (error) {
-      console.error('Resim yükleme hatası:', error)
-      toast.error('Resim yüklenirken bir hata oluştu.')
+      console.error('Resim yükleme hatası:', error);
+      toast.error('Resim yüklenirken bir hata oluştu.');
     } finally {
-      setImageUploading(false)
+      setImageUploading(false);
     }
-  }
+  };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
+    const file = e.target.files?.[0];
+    if (!file) return;
 
     if (!file.type.startsWith('image/')) {
-      toast.error('Lütfen sadece resim dosyası yükleyin.')
-      return
+      toast.error('Lütfen sadece resim dosyası yükleyin.');
+      return;
     }
 
     if (file.size > 5 * 1024 * 1024) {
-      toast.error('Resim boyutu 5MB\'dan küçük olmalıdır.')
-      return
+      toast.error('Resim boyutu 5MB\'dan küçük olmalıdır.');
+      return;
     }
 
-    await handleImageUpload(file)
-  }
+    await handleImageUpload(file);
+  };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const { name, value, type } = e.target
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+  ) => {
+    const { name, value, type } = e.target;
     
     if (type === 'checkbox') {
-      const checkbox = e.target as HTMLInputElement
-      setFormData(prev => ({ ...prev, [name]: checkbox.checked }))
+      const checkbox = e.target as HTMLInputElement;
+      setFormData(prev => ({ ...prev, [name]: checkbox.checked }));
     } else {
-      setFormData(prev => ({ ...prev, [name]: value }))
+      setFormData(prev => ({ ...prev, [name]: value }));
     }
-  }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
-
-    if (!formData.title || !formData.content) {
-      toast.error('Başlık ve içerik alanları zorunludur.')
-      setLoading(false)
-      return
-    }
+    e.preventDefault();
+    if (!params.id) return;
+    
+    setLoading(true);
 
     try {
       if (formData.is_featured) {
         await supabase
           .from('posts')
           .update({ is_featured: false })
-          .eq('is_featured', true)
-      }
-
-      const slug = formData.title
-        .toLowerCase()
-        .replace(/ğ/g, 'g')
-        .replace(/ü/g, 'u')
-        .replace(/ş/g, 's')
-        .replace(/ı/g, 'i')
-        .replace(/ö/g, 'o')
-        .replace(/ç/g, 'c')
-        .replace(/[^a-z0-9]/g, '-')
-        .replace(/-+/g, '-')
-        .replace(/^-|-$/g, '')
-
-      const postData = {
-        ...formData,
-        slug,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+          .neq('id', params.id);
       }
 
       const { error } = await supabase
         .from('posts')
-        .insert([postData])
+        .update({
+          ...formData,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', params.id);
 
-      if (error) throw error
+      if (error) throw error;
 
-      toast.success('Yazı başarıyla oluşturuldu.')
-      router.push('/admin/posts')
-    } catch (error: any) {
-      console.error('Error creating post:', error)
-      toast.error('Yazı oluşturulurken bir hata oluştu.')
+      toast.success('Yazı başarıyla güncellendi.');
+      router.push('/admin/posts');
+    } catch (error) {
+      console.error('Error updating post:', error);
+      toast.error('Yazı güncellenirken bir hata oluştu.');
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-gray-100">Yeni Yazı</h1>
-          <p className="text-gray-400 mt-2">Yeni bir blog yazısı oluşturun</p>
+          <h1 className="text-3xl font-bold text-gray-100">Yazıyı Düzenle</h1>
+          <p className="text-gray-400 mt-2">Yazı içeriğini güncelleyin</p>
         </div>
         <Link 
           href="/admin/posts" 
@@ -243,22 +261,9 @@ export default function NewPostPage() {
           </div>
 
           <div>
-            <div className="flex items-center justify-between mb-1">
-              <label htmlFor="content" className="block text-sm font-medium text-gray-300">
-                İçerik
-              </label>
-              <label className="flex items-center space-x-2 text-sm text-gray-400 cursor-pointer hover:text-white transition-colors">
-                <i className="ri-image-add-line"></i>
-                <span>Resim Ekle</span>
-                <input
-                  type="file"
-                  className="hidden"
-                  accept="image/*"
-                  onChange={handleFileChange}
-                  disabled={imageUploading}
-                />
-              </label>
-            </div>
+            <label htmlFor="content" className="block text-sm font-medium text-gray-300 mb-1">
+              İçerik
+            </label>
             <textarea
               ref={contentRef}
               id="content"
@@ -346,14 +351,14 @@ export default function NewPostPage() {
             {loading ? (
               <span className="flex items-center">
                 <i className="ri-loader-4-line animate-spin mr-2"></i>
-                Oluşturuluyor...
+                Kaydediliyor...
               </span>
             ) : (
-              'Oluştur'
+              'Kaydet'
             )}
           </button>
         </div>
       </form>
     </div>
-  )
+  );
 } 

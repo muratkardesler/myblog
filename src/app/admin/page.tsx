@@ -1,109 +1,176 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { Post, Category } from '@/lib/types'
+import { getLatestPosts, getCategories } from '@/lib/supabase'
+import Link from 'next/link'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
-import { useRouter } from 'next/navigation'
 
-export default function AdminLoginPage() {
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const router = useRouter()
+interface Stats {
+  posts: number;
+  categories: number;
+  comments: number;
+  subscribers: number;
+}
+
+export default function AdminDashboard() {
+  const [posts, setPosts] = useState<Post[]>([])
+  const [categories, setCategories] = useState<Category[]>([])
+  const [mounted, setMounted] = useState(false)
+  const [stats, setStats] = useState<Stats>({
+    posts: 0,
+    categories: 0,
+    comments: 0,
+    subscribers: 0
+  })
+
   const supabase = createClientComponentClient()
 
   useEffect(() => {
-    const checkUser = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (session) {
-        router.push('/admin/dashboard')
-      }
-    }
+    setMounted(true)
+    loadData()
+    loadStats()
+  }, [])
 
-    checkUser()
-  }, [router, supabase])
-
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
-    setError(null)
-
-    try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      })
-
-      if (error) throw error
-
-      router.push('/admin/dashboard')
-    } catch (error) {
-      setError('Giriş başarısız. Lütfen bilgilerinizi kontrol edin.')
-    } finally {
-      setLoading(false)
-    }
+  const loadData = async () => {
+    const [postsData, categoriesData] = await Promise.all([
+      getLatestPosts(5),
+      getCategories()
+    ])
+    setPosts(postsData)
+    setCategories(categoriesData)
   }
 
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
-        <div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            Admin Paneli
-          </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
-            Lütfen giriş yapın
-          </p>
-        </div>
-        <form className="mt-8 space-y-6" onSubmit={handleLogin}>
-          {error && (
-            <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded">
-              {error}
-            </div>
-          )}
-          <div className="rounded-md shadow-sm space-y-4">
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                E-posta
-              </label>
-              <input
-                id="email"
-                name="email"
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
-                placeholder="E-posta adresiniz"
-              />
-            </div>
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                Şifre
-              </label>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
-                placeholder="Şifreniz"
-              />
-            </div>
-          </div>
+  const loadStats = async () => {
+    // Posts count
+    const { count: postsCount } = await supabase
+      .from('posts')
+      .select('*', { count: 'exact', head: true })
 
-          <div>
-            <button
-              type="submit"
-              disabled={loading}
-              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {loading ? 'Giriş yapılıyor...' : 'Giriş Yap'}
-            </button>
+    // Categories count
+    const { count: categoriesCount } = await supabase
+      .from('categories')
+      .select('*', { count: 'exact', head: true })
+
+    setStats({
+      posts: postsCount || 0,
+      categories: categoriesCount || 0,
+      comments: 0,
+      subscribers: 0
+    })
+  }
+
+  if (!mounted) return null
+
+  return (
+    <div className="container mx-auto px-4 py-8">
+      <h1 className="text-3xl font-bold text-gray-100 mb-8">Admin Paneli</h1>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <Link href="/admin/posts" className="bg-purple-500 rounded-xl p-6 hover:bg-purple-600 transition-colors">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-4xl font-bold text-white">{stats.posts}</p>
+              <h2 className="text-lg text-purple-100">Yazılar</h2>
+            </div>
+            <i className="ri-article-line text-3xl text-purple-200"></i>
           </div>
-        </form>
+        </Link>
+
+        <Link href="/admin/categories" className="bg-blue-500 rounded-xl p-6 hover:bg-blue-600 transition-colors">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-4xl font-bold text-white">{stats.categories}</p>
+              <h2 className="text-lg text-blue-100">Kategoriler</h2>
+            </div>
+            <i className="ri-price-tag-3-line text-3xl text-blue-200"></i>
+          </div>
+        </Link>
+
+        <div className="bg-green-500 rounded-xl p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-4xl font-bold text-white">{stats.comments}</p>
+              <h2 className="text-lg text-green-100">Yorumlar</h2>
+            </div>
+            <i className="ri-chat-3-line text-3xl text-green-200"></i>
+          </div>
+        </div>
+
+        <div className="bg-red-500 rounded-xl p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-4xl font-bold text-white">{stats.subscribers}</p>
+              <h2 className="text-lg text-red-100">Aboneler</h2>
+            </div>
+            <i className="ri-user-follow-line text-3xl text-red-200"></i>
+          </div>
+        </div>
+      </div>
+
+      <div className="mb-12">
+        <h2 className="text-xl font-semibold text-gray-100 mb-4">Hızlı İşlemler</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <Link
+            href="/admin/posts/new"
+            className="flex items-center justify-center bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded-xl p-6 transition-colors group"
+          >
+            <i className="ri-add-line text-2xl text-primary group-hover:text-white mr-3"></i>
+            <span className="text-gray-300 group-hover:text-white">Yeni Yazı</span>
+          </Link>
+
+          <Link
+            href="/admin/categories"
+            className="flex items-center justify-center bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded-xl p-6 transition-colors group"
+          >
+            <i className="ri-price-tag-3-line text-2xl text-primary group-hover:text-white mr-3"></i>
+            <span className="text-gray-300 group-hover:text-white">Kategoriler</span>
+          </Link>
+
+          <Link
+            href="/admin/settings"
+            className="flex items-center justify-center bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded-xl p-6 transition-colors group"
+          >
+            <i className="ri-settings-3-line text-2xl text-primary group-hover:text-white mr-3"></i>
+            <span className="text-gray-300 group-hover:text-white">Ayarlar</span>
+          </Link>
+
+          <Link
+            href="/blog"
+            target="_blank"
+            className="flex items-center justify-center bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded-xl p-6 transition-colors group"
+          >
+            <i className="ri-external-link-line text-2xl text-primary group-hover:text-white mr-3"></i>
+            <span className="text-gray-300 group-hover:text-white">Siteyi Görüntüle</span>
+          </Link>
+        </div>
+      </div>
+
+      <div>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-semibold text-gray-100">Son Yazılar</h2>
+          <Link href="/admin/posts" className="text-primary hover:text-purple-400 transition-colors">
+            Tümünü Gör
+          </Link>
+        </div>
+
+        <div className="bg-gray-800 border border-gray-700 rounded-xl overflow-hidden">
+          <div className="p-6">
+            {stats.posts === 0 ? (
+              <div className="text-center py-8">
+                <i className="ri-article-line text-4xl text-gray-500 mb-3"></i>
+                <p className="text-gray-400">Henüz yazı eklenmemiş</p>
+                <Link
+                  href="/admin/posts/new"
+                  className="inline-flex items-center mt-4 text-primary hover:text-purple-400 transition-colors"
+                >
+                  <i className="ri-add-line mr-2"></i>
+                  İlk yazını ekle
+                </Link>
+              </div>
+            ) : null}
+          </div>
+        </div>
       </div>
     </div>
   )
