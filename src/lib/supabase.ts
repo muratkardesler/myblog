@@ -14,7 +14,8 @@ export async function getFeaturedPost(): Promise<Post | null> {
       category:categories(*)
     `)
     .eq('status', 'published')
-    .eq('is_featured', true)
+    .order('created_at', { ascending: false })
+    .limit(1)
     .single();
 
   if (error) {

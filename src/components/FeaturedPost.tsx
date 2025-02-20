@@ -5,7 +5,7 @@ import { Post } from '@/lib/types';
 import { getFeaturedPost } from '@/lib/supabase';
 import { calculateReadingTime } from '@/lib/utils';
 import Link from 'next/link';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { supabase } from '@/lib/supabase';
 import Image from 'next/image';
 
 interface Settings {
@@ -18,7 +18,6 @@ export default function FeaturedPost() {
   const [post, setPost] = useState<Post | null>(null);
   const [settings, setSettings] = useState<Settings | null>(null);
   const [mounted, setMounted] = useState(false);
-  const supabase = createClientComponentClient();
 
   useEffect(() => {
     setMounted(true);
@@ -60,6 +59,7 @@ export default function FeaturedPost() {
                   src={settings.admin_image}
                   alt={settings.admin_name}
                   fill
+                  sizes="40px"
                   className="object-cover"
                 />
               ) : (
@@ -89,10 +89,12 @@ export default function FeaturedPost() {
           </div>
         </div>
         <div className="relative h-[400px]">
-          <img
+          <Image
             src={post.featured_image}
             alt={post.title}
-            className="absolute inset-0 w-full h-full object-cover rounded-xl"
+            fill
+            sizes="(max-width: 768px) 100vw, 50vw"
+            className="object-cover rounded-xl"
           />
         </div>
       </div>

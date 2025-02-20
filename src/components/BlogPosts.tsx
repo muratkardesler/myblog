@@ -5,6 +5,7 @@ import { Post } from '@/lib/types';
 import { getLatestPosts } from '@/lib/supabase';
 import { calculateReadingTime } from '@/lib/utils';
 import Link from 'next/link';
+import Image from 'next/image';
 
 export default function BlogPosts() {
   const [posts, setPosts] = useState<Post[]>([]);
@@ -40,7 +41,13 @@ export default function BlogPosts() {
         {posts.map(post => (
           <article key={post.id} className="bg-gray-800 border border-gray-700 rounded-xl overflow-hidden hover:shadow-lg transition-shadow">
             <div className="relative h-48">
-              <img src={post.featured_image} alt={post.title} className="absolute inset-0 w-full h-full object-cover" />
+              <Image 
+                src={post.featured_image} 
+                alt={post.title} 
+                fill
+                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                className="object-cover" 
+              />
               {post.category && (
                 <Link
                   href={`/category/${post.category.slug}`}

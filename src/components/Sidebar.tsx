@@ -5,7 +5,7 @@ import { Post, Category } from '@/lib/types';
 import { getPopularPosts, getCategories } from '@/lib/supabase';
 import { formatDate } from '@/lib/utils';
 import Link from 'next/link';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { supabase } from '@/lib/supabase';
 import Image from 'next/image';
 
 interface Settings {
@@ -20,7 +20,6 @@ export default function Sidebar() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [settings, setSettings] = useState<Settings | null>(null);
   const [mounted, setMounted] = useState(false);
-  const supabase = createClientComponentClient();
 
   useEffect(() => {
     setMounted(true);
@@ -51,7 +50,9 @@ export default function Sidebar() {
                 src={settings.admin_image}
                 alt={settings.admin_name}
                 fill
+                sizes="64px"
                 className="object-cover"
+                priority
               />
             ) : (
               <div className="w-full h-full bg-gray-700 flex items-center justify-center">
@@ -111,6 +112,7 @@ export default function Sidebar() {
                   src={post.featured_image}
                   alt={post.title}
                   fill
+                  sizes="80px"
                   className="object-cover"
                 />
               </div>
