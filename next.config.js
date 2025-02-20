@@ -7,14 +7,13 @@ const nextConfig = {
     remotePatterns: [
       {
         protocol: 'https',
-        hostname: 'placehold.co',
+        hostname: 'placehold.co'
       },
       {
         protocol: 'https',
-        hostname: '**.supabase.co',
+        hostname: 'rlvvgvpprwwcgwqvqwvx.supabase.co'
       }
-    ],
-    domains: ['placehold.co', 'rlvvgvpprwwcgwqvqwvx.supabase.co']
+    ]
   },
 }
 
