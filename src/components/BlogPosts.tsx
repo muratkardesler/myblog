@@ -3,8 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Post } from '@/lib/types';
 import { getLatestPosts } from '@/lib/supabase';
-import { calculateReadingTime } from '@/lib/utils';
-import Link from 'next/link';
+import { calculateReadingTime, formatDate } from '@/lib/utils';
 import Image from 'next/image';
 
 export default function BlogPosts() {
@@ -12,6 +11,7 @@ export default function BlogPosts() {
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [mounted, setMounted] = useState(false);
+  const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const postsPerPage = 6;
 
   useEffect(() => {
@@ -39,46 +39,44 @@ export default function BlogPosts() {
     <div className="space-y-8">
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
         {posts.map(post => (
-          <article key={post.id} className="bg-gray-800 border border-gray-700 rounded-xl overflow-hidden hover:shadow-lg transition-shadow">
-            <Link href={`/blog/${post.slug}`} className="block">
+          <article key={post.id} className="group bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-xl overflow-hidden hover:shadow-xl hover:shadow-purple-500/10 hover:border-purple-500/50 transition-all duration-300">
+            <button onClick={() => setSelectedPost(post)} className="block w-full text-left">
               <div className="relative h-48">
                 <Image 
                   src={post.featured_image} 
                   alt={post.title} 
                   fill
                   sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                  className="object-cover" 
+                  className="object-cover group-hover:scale-105 transition-transform duration-300" 
                 />
                 {post.category && (
-                  <div className="absolute top-4 left-4 px-3 py-1 rounded-full text-sm font-medium bg-gray-900/90 text-gray-100">
+                  <div className="absolute top-4 left-4 px-4 py-1.5 rounded-full text-sm font-medium bg-purple-600/90 text-white backdrop-blur-sm">
                     {post.category.name}
                   </div>
                 )}
               </div>
-            </Link>
-            <div className="p-6">
-              <Link href={`/blog/${post.slug}`} className="block">
-                <h2 className="text-xl font-semibold text-gray-100 mb-2 hover:text-primary transition-colors">
+              <div className="p-6">
+                <h2 className="text-xl font-semibold text-white mb-2 group-hover:text-purple-400 transition-colors">
                   {post.title}
                 </h2>
                 <p className="text-gray-400 text-sm mb-4 line-clamp-2">
                   {post.content}
                 </p>
-              </Link>
-              <div className="flex items-center justify-between">
-                <div className="text-sm text-gray-500">
-                  {calculateReadingTime(post.content)}
-                </div>
-                <div className="flex space-x-3">
-                  <button className="like-btn w-8 h-8 flex items-center justify-center hover:bg-gray-700 rounded-full transition-colors">
-                    <i className="ri-heart-line"></i>
-                  </button>
-                  <button className="bookmark-btn w-8 h-8 flex items-center justify-center hover:bg-gray-700 rounded-full transition-colors">
-                    <i className="ri-bookmark-line"></i>
-                  </button>
+                <div className="flex items-center justify-between">
+                  <div className="text-sm text-gray-500">
+                    {calculateReadingTime(post.content)}
+                  </div>
+                  <div className="flex space-x-3">
+                    <button className="like-btn w-8 h-8 flex items-center justify-center hover:bg-purple-500/10 rounded-full transition-colors">
+                      <i className="ri-heart-line text-purple-400"></i>
+                    </button>
+                    <button className="bookmark-btn w-8 h-8 flex items-center justify-center hover:bg-purple-500/10 rounded-full transition-colors">
+                      <i className="ri-bookmark-line text-purple-400"></i>
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
+            </button>
           </article>
         ))}
       </div>
@@ -95,6 +93,81 @@ export default function BlogPosts() {
           >
             Daha Fazla
           </button>
+        </div>
+      )}
+
+      {/* Blog Post Modal */}
+      {selectedPost && (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div 
+            className="fixed inset-0 bg-black/70 backdrop-blur-sm transition-opacity animate-fade-in" 
+            onClick={() => setSelectedPost(null)}
+          ></div>
+          <div className="flex min-h-full items-start justify-center p-4 pt-16 sm:pt-24">
+            <div className="relative w-full max-w-4xl bg-gray-900/95 backdrop-blur-sm rounded-2xl shadow-2xl border border-gray-800/50 animate-slide-up">
+              {/* Modal Header */}
+              <div className="relative h-72 sm:h-96">
+                <Image
+                  src={selectedPost.featured_image || '/images/placeholder.jpg'}
+                  alt={selectedPost.title}
+                  fill
+                  className="object-cover rounded-t-2xl"
+                  sizes="(max-width: 1536px) 100vw, 1536px"
+                  priority
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-gray-900/80 to-transparent"></div>
+                <button
+                  onClick={() => setSelectedPost(null)}
+                  className="absolute top-4 right-4 w-10 h-10 flex items-center justify-center rounded-full bg-gray-900/90 text-white hover:bg-gray-800 transition-colors"
+                >
+                  <i className="ri-close-line text-xl"></i>
+                </button>
+                {selectedPost.category && (
+                  <div className="absolute bottom-4 left-4 px-4 py-1.5 rounded-full text-sm font-medium bg-purple-600/90 text-white backdrop-blur-sm">
+                    {selectedPost.category.name}
+                  </div>
+                )}
+              </div>
+
+              {/* Modal Content */}
+              <div className="p-6 sm:p-8">
+                <h2 className="text-2xl sm:text-3xl font-bold text-white mb-4">{selectedPost.title}</h2>
+                <div className="flex items-center space-x-4 text-sm text-gray-400 mb-8">
+                  <span className="flex items-center">
+                    <i className="ri-calendar-line mr-2"></i>
+                    {formatDate(selectedPost.created_at)}
+                  </span>
+                  <span className="flex items-center">
+                    <i className="ri-time-line mr-2"></i>
+                    {calculateReadingTime(selectedPost.content)}
+                  </span>
+                </div>
+                <div className="prose prose-invert max-w-none">
+                  <p className="text-gray-300 leading-relaxed whitespace-pre-wrap">
+                    {selectedPost.content}
+                  </p>
+                </div>
+              </div>
+
+              {/* Modal Footer */}
+              <div className="sticky bottom-0 border-t border-gray-800/50 bg-gray-900/95 backdrop-blur-sm p-4 sm:p-6 flex justify-between items-center rounded-b-2xl">
+                <div className="flex space-x-2 sm:space-x-3">
+                  <button className="flex items-center space-x-2 px-3 sm:px-4 py-2 rounded-xl bg-gray-800 text-gray-300 hover:bg-purple-500/20 hover:text-purple-400 transition-colors">
+                    <i className="ri-heart-line"></i>
+                    <span className="hidden sm:inline">Beğen</span>
+                  </button>
+                  <button className="flex items-center space-x-2 px-3 sm:px-4 py-2 rounded-xl bg-gray-800 text-gray-300 hover:bg-purple-500/20 hover:text-purple-400 transition-colors">
+                    <i className="ri-bookmark-line"></i>
+                    <span className="hidden sm:inline">Kaydet</span>
+                  </button>
+                </div>
+                <button className="flex items-center space-x-2 px-3 sm:px-4 py-2 rounded-xl bg-gray-800 text-gray-300 hover:bg-purple-500/20 hover:text-purple-400 transition-colors">
+                  <i className="ri-share-line"></i>
+                  <span className="hidden sm:inline">Paylaş</span>
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>

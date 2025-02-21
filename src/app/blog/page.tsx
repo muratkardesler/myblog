@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { Post, Category } from '@/lib/types';
-import Link from 'next/link';
 import Image from 'next/image';
 import { formatDate, calculateReadingTime } from '@/lib/utils';
 import Header from '@/components/Header';
@@ -175,20 +174,26 @@ export default function BlogPage() {
       {/* Blog Post Modal */}
       {selectedPost && (
         <div className="fixed inset-0 z-50 overflow-y-auto">
-          <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm transition-opacity" onClick={() => setSelectedPost(null)}></div>
-          <div className="flex min-h-full items-start justify-center p-4 pt-24">
-            <div className="relative w-full max-w-4xl bg-gray-900 rounded-2xl shadow-xl">
+          <div 
+            className="fixed inset-0 bg-black/70 backdrop-blur-sm transition-opacity animate-fade-in" 
+            onClick={() => setSelectedPost(null)}
+          ></div>
+          <div className="flex min-h-full items-start justify-center p-4 pt-16 sm:pt-24">
+            <div className="relative w-full max-w-4xl bg-gray-900/95 backdrop-blur-sm rounded-2xl shadow-2xl border border-gray-800/50 animate-slide-up">
               {/* Modal Header */}
-              <div className="relative h-96">
+              <div className="relative h-72 sm:h-96">
                 <Image
                   src={selectedPost.featured_image || '/images/placeholder.jpg'}
                   alt={selectedPost.title}
                   fill
                   className="object-cover rounded-t-2xl"
+                  sizes="(max-width: 1536px) 100vw, 1536px"
+                  priority
                 />
+                <div className="absolute inset-0 bg-gradient-to-t from-gray-900/80 to-transparent"></div>
                 <button
                   onClick={() => setSelectedPost(null)}
-                  className="absolute top-4 right-4 w-10 h-10 flex items-center justify-center rounded-full bg-gray-900/80 text-white hover:bg-gray-800 transition-colors"
+                  className="absolute top-4 right-4 w-10 h-10 flex items-center justify-center rounded-full bg-gray-900/90 text-white hover:bg-gray-800 transition-colors"
                 >
                   <i className="ri-close-line text-xl"></i>
                 </button>
@@ -200,8 +205,8 @@ export default function BlogPage() {
               </div>
 
               {/* Modal Content */}
-              <div className="p-8">
-                <h2 className="text-3xl font-bold text-white mb-4">{selectedPost.title}</h2>
+              <div className="p-6 sm:p-8">
+                <h2 className="text-2xl sm:text-3xl font-bold text-white mb-4">{selectedPost.title}</h2>
                 <div className="flex items-center space-x-4 text-sm text-gray-400 mb-8">
                   <span className="flex items-center">
                     <i className="ri-calendar-line mr-2"></i>
@@ -220,20 +225,20 @@ export default function BlogPage() {
               </div>
 
               {/* Modal Footer */}
-              <div className="border-t border-gray-800 p-6 flex justify-between items-center">
-                <div className="flex space-x-3">
-                  <button className="flex items-center space-x-2 px-4 py-2 rounded-xl bg-gray-800 text-gray-300 hover:bg-gray-700 transition-colors">
+              <div className="sticky bottom-0 border-t border-gray-800/50 bg-gray-900/95 backdrop-blur-sm p-4 sm:p-6 flex justify-between items-center rounded-b-2xl">
+                <div className="flex space-x-2 sm:space-x-3">
+                  <button className="flex items-center space-x-2 px-3 sm:px-4 py-2 rounded-xl bg-gray-800 text-gray-300 hover:bg-purple-500/20 hover:text-purple-400 transition-colors">
                     <i className="ri-heart-line"></i>
-                    <span>Beğen</span>
+                    <span className="hidden sm:inline">Beğen</span>
                   </button>
-                  <button className="flex items-center space-x-2 px-4 py-2 rounded-xl bg-gray-800 text-gray-300 hover:bg-gray-700 transition-colors">
+                  <button className="flex items-center space-x-2 px-3 sm:px-4 py-2 rounded-xl bg-gray-800 text-gray-300 hover:bg-purple-500/20 hover:text-purple-400 transition-colors">
                     <i className="ri-bookmark-line"></i>
-                    <span>Kaydet</span>
+                    <span className="hidden sm:inline">Kaydet</span>
                   </button>
                 </div>
-                <button className="flex items-center space-x-2 px-4 py-2 rounded-xl bg-gray-800 text-gray-300 hover:bg-gray-700 transition-colors">
+                <button className="flex items-center space-x-2 px-3 sm:px-4 py-2 rounded-xl bg-gray-800 text-gray-300 hover:bg-purple-500/20 hover:text-purple-400 transition-colors">
                   <i className="ri-share-line"></i>
-                  <span>Paylaş</span>
+                  <span className="hidden sm:inline">Paylaş</span>
                 </button>
               </div>
             </div>
