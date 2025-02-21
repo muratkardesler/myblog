@@ -92,40 +92,45 @@ export default function AboutPage() {
       <main className="min-h-screen bg-gray-900">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-32 pb-12">
           <div className="bg-gray-800 border border-gray-700 rounded-xl p-8">
-            <div className="space-y-8">
+            <div className="space-y-12">
               <div>
-                <h2 className="text-2xl font-semibold text-gray-100 mb-4">
+                <h2 className="text-3xl font-bold bg-gradient-to-r from-purple-400 to-purple-600 text-transparent bg-clip-text font-display mb-6">
                   {about?.title || 'Merhaba! Ben ' + settings?.admin_name}
                 </h2>
-                <p className="text-gray-400">
+                <p className="text-gray-300 leading-relaxed text-lg">
                   {about?.description || settings?.admin_description || 'Hakkımda sayfası içeriği henüz eklenmemiş.'}
                 </p>
               </div>
 
               {sections.filter(section => section.is_active).map(section => (
-                <div key={section.id}>
-                  <h3 className="text-xl font-semibold text-gray-100 mb-3">
+                <div key={section.id} className="border-t border-gray-700 pt-8">
+                  <h3 className="text-2xl font-semibold text-white mb-4 flex items-center">
+                    <span className="w-2 h-2 rounded-full bg-purple-500 mr-3"></span>
                     {section.title}
                   </h3>
-                  <p className="text-gray-400">{section.content}</p>
+                  <p className="text-gray-300 leading-relaxed pl-5">
+                    {section.content}
+                  </p>
                 </div>
               ))}
 
-              <div className="flex space-x-4">
-                <Link
-                  href="https://github.com"
-                  target="_blank"
-                  className="w-10 h-10 flex items-center justify-center rounded-full bg-gray-700 hover:bg-gray-600 transition-colors"
-                >
-                  <i className="ri-github-line text-gray-100"></i>
-                </Link>
-                <Link
-                  href="https://linkedin.com"
-                  target="_blank"
-                  className="w-10 h-10 flex items-center justify-center rounded-full bg-gray-700 hover:bg-gray-600 transition-colors"
-                >
-                  <i className="ri-linkedin-line text-gray-100"></i>
-                </Link>
+              <div className="border-t border-gray-700 pt-8">
+                <div className="flex space-x-4">
+                  <Link
+                    href="https://github.com"
+                    target="_blank"
+                    className="w-12 h-12 flex items-center justify-center rounded-full bg-gray-700 hover:bg-purple-600 transition-all transform hover:scale-110 duration-300"
+                  >
+                    <i className="ri-github-line text-xl text-gray-100"></i>
+                  </Link>
+                  <Link
+                    href="https://linkedin.com"
+                    target="_blank"
+                    className="w-12 h-12 flex items-center justify-center rounded-full bg-gray-700 hover:bg-purple-600 transition-all transform hover:scale-110 duration-300"
+                  >
+                    <i className="ri-linkedin-line text-xl text-gray-100"></i>
+                  </Link>
+                </div>
               </div>
             </div>
           </div>
