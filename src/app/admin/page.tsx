@@ -9,7 +9,7 @@ import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 interface Stats {
   posts: number;
   categories: number;
-  comments: number;
+  contacts: number;
   subscribers: number;
 }
 
@@ -20,7 +20,7 @@ export default function AdminDashboard() {
   const [stats, setStats] = useState<Stats>({
     posts: 0,
     categories: 0,
-    comments: 0,
+    contacts: 0,
     subscribers: 0
   })
 
@@ -52,10 +52,15 @@ export default function AdminDashboard() {
       .from('categories')
       .select('*', { count: 'exact', head: true })
 
+    // Contacts count
+    const { count: contactsCount } = await supabase
+      .from('contacts')
+      .select('*', { count: 'exact', head: true })
+
     setStats({
       posts: postsCount || 0,
       categories: categoriesCount || 0,
-      comments: 0,
+      contacts: contactsCount || 0,
       subscribers: 0
     })
   }
@@ -87,15 +92,15 @@ export default function AdminDashboard() {
           </div>
         </Link>
 
-        <div className="bg-green-500 rounded-xl p-6">
+        <Link href="/admin/contacts" className="bg-green-500 rounded-xl p-6 hover:bg-green-600 transition-colors">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-4xl font-bold text-white">{stats.comments}</p>
-              <h2 className="text-lg text-green-100">Yorumlar</h2>
+              <p className="text-4xl font-bold text-white">{stats.contacts}</p>
+              <h2 className="text-lg text-green-100">Gelen Mesajlar</h2>
             </div>
             <i className="ri-chat-3-line text-3xl text-green-200"></i>
           </div>
-        </div>
+        </Link>
 
         <div className="bg-red-500 rounded-xl p-6">
           <div className="flex items-center justify-between">

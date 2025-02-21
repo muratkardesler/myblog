@@ -12,6 +12,7 @@ interface Settings {
   admin_title: string;
   admin_description: string;
   admin_image: string;
+  contact_email: string;
   created_at: string;
 }
 
@@ -100,7 +101,8 @@ export default function SettingsPage() {
         admin_name: formData.get('admin_name'),
         admin_title: formData.get('admin_title'),
         admin_description: formData.get('admin_description'),
-        admin_image: settings?.admin_image || ''
+        admin_image: settings?.admin_image || '',
+        contact_email: formData.get('contact_email'),
       };
 
       let error;
@@ -239,6 +241,25 @@ export default function SettingsPage() {
               placeholder="Kısa bir açıklama"
               required
             />
+          </div>
+
+          <div className="mt-8">
+            <h2 className="text-lg font-semibold text-gray-100 mb-4">İletişim Bilgileri</h2>
+            <div className="space-y-4">
+              <div>
+                <label htmlFor="contact_email" className="block text-sm font-medium text-gray-300 mb-1">
+                  E-posta Adresi
+                </label>
+                <input
+                  type="email"
+                  id="contact_email"
+                  name="contact_email"
+                  defaultValue={settings?.contact_email}
+                  className="w-full px-4 py-2 bg-gray-900 border border-gray-700 rounded-xl text-gray-100 focus:outline-none focus:border-primary"
+                  placeholder="örn: info@muratkardesler.com"
+                />
+              </div>
+            </div>
           </div>
 
           <div className="pt-4">

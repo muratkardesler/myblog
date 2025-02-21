@@ -117,14 +117,14 @@ export default function AboutPage() {
               <div className="border-t border-gray-700 pt-8">
                 <div className="flex space-x-4">
                   <Link
-                    href="https://github.com"
+                    href="https://github.com/muratkardesler"
                     target="_blank"
                     className="w-12 h-12 flex items-center justify-center rounded-full bg-gray-700 hover:bg-purple-600 transition-all transform hover:scale-110 duration-300"
                   >
                     <i className="ri-github-line text-xl text-gray-100"></i>
                   </Link>
                   <Link
-                    href="https://linkedin.com"
+                    href="https://linkedin.com/in/muratkardesler"
                     target="_blank"
                     className="w-12 h-12 flex items-center justify-center rounded-full bg-gray-700 hover:bg-purple-600 transition-all transform hover:scale-110 duration-300"
                   >

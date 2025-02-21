@@ -1,10 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
-import toast from 'react-hot-toast';
+import toast, { Toaster } from 'react-hot-toast';
 
 interface ContactForm {
   name: string;
@@ -13,9 +13,14 @@ interface ContactForm {
   message: string;
 }
 
+interface Settings {
+  contact_email: string;
+}
+
 export default function ContactPage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [settings, setSettings] = useState<Settings | null>(null);
   const [form, setForm] = useState<ContactForm>({
     name: '',
     email: '',
@@ -23,6 +28,24 @@ export default function ContactPage() {
     message: ''
   });
   const supabase = createClientComponentClient();
+
+  useEffect(() => {
+    loadSettings();
+  }, []);
+
+  const loadSettings = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('settings')
+        .select('contact_email')
+        .single();
+
+      if (error) throw error;
+      setSettings(data);
+    } catch (error) {
+      console.error('Error loading settings:', error);
+    }
+  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -58,14 +81,25 @@ export default function ContactPage() {
   return (
     <>
       <Header mobileMenuOpen={mobileMenuOpen} setMobileMenuOpen={setMobileMenuOpen} />
+      <Toaster
+        position="top-right"
+        toastOptions={{
+          duration: 3000,
+          style: {
+            background: '#1F2937',
+            color: '#F3F4F6',
+            borderRadius: '0.75rem',
+          },
+          success: {
+            iconTheme: {
+              primary: '#10B981',
+              secondary: '#F3F4F6',
+            },
+          },
+        }}
+      />
       <main className="min-h-screen bg-gray-900">
-        <div className="bg-gradient-to-b from-gray-800 to-gray-900 border-b border-gray-800">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-            <h1 className="text-4xl font-bold text-gray-100">İletişim</h1>
-          </div>
-        </div>
-
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-32 pb-16">
           <div className="grid lg:grid-cols-3 gap-8">
             {/* İletişim Bilgileri */}
             <div>
@@ -77,25 +111,27 @@ export default function ContactPage() {
                   </p>
                 </div>
 
-                <div>
-                  <div className="flex items-center space-x-3 text-gray-400">
-                    <i className="ri-mail-line text-xl text-primary"></i>
-                    <span>info@muratkardesler.com</span>
+                {settings?.contact_email && (
+                  <div>
+                    <div className="flex items-center space-x-3 text-gray-400">
+                      <i className="ri-mail-line text-xl text-primary"></i>
+                      <span>{settings.contact_email}</span>
+                    </div>
                   </div>
-                </div>
+                )}
 
                 <div>
                   <h3 className="text-lg font-semibold text-gray-100 mb-3">Sosyal Medya</h3>
                   <div className="flex space-x-4">
                     <a
-                      href="https://github.com"
+                      href="https://github.com/muratkardesler"
                       target="_blank"
                       className="w-10 h-10 flex items-center justify-center rounded-full bg-gray-700 hover:bg-gray-600 transition-colors"
                     >
                       <i className="ri-github-line text-gray-100"></i>
                     </a>
                     <a
-                      href="https://linkedin.com"
+                      href="https://linkedin.com/in/muratkardesler"
                       target="_blank"
                       className="w-10 h-10 flex items-center justify-center rounded-full bg-gray-700 hover:bg-gray-600 transition-colors"
                     >
