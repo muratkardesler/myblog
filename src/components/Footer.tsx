@@ -4,7 +4,7 @@ export default function Footer() {
   return (
     <footer className="bg-gradient-to-b from-gray-900 to-gray-800 border-t border-gray-800">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid md:grid-cols-4 gap-8">
+        <div className="grid md:grid-cols-3 gap-8">
           <div>
             <Link href="/" className="flex items-center space-x-2">
               <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-purple-600 to-purple-400 text-white font-bold text-xl">
@@ -29,23 +29,11 @@ export default function Footer() {
             <h4 className="font-semibold text-gray-100 mb-4">Sosyal Medya</h4>
             <div className="flex space-x-4">
               <a href="#" className="w-10 h-10 flex items-center justify-center rounded-full bg-gray-800 border border-gray-700 hover:border-primary transition-colors">
-                <i className="ri-twitter-x-line"></i>
-              </a>
-              <a href="#" className="w-10 h-10 flex items-center justify-center rounded-full bg-gray-800 border border-gray-700 hover:border-primary transition-colors">
                 <i className="ri-linkedin-line"></i>
               </a>
               <a href="#" className="w-10 h-10 flex items-center justify-center rounded-full bg-gray-800 border border-gray-700 hover:border-primary transition-colors">
                 <i className="ri-github-line"></i>
               </a>
-            </div>
-          </div>
-          <div>
-            <h4 className="font-semibold text-gray-100 mb-4">Bülten</h4>
-            <div className="flex">
-              <input type="email" placeholder="E-posta adresiniz" className="flex-1 px-4 py-2 border border-gray-700 bg-gray-800 text-gray-100 rounded-l-button focus:outline-none focus:border-primary" />
-              <button className="!rounded-r-button !rounded-l-none bg-primary text-white px-6 py-2 hover:bg-blue-600 transition-colors whitespace-nowrap">
-                Abone Ol
-              </button>
             </div>
           </div>
         </div>

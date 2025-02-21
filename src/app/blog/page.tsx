@@ -5,7 +5,7 @@ import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { Post, Category } from '@/lib/types';
 import Link from 'next/link';
 import Image from 'next/image';
-import { formatDate } from '@/lib/utils';
+import { formatDate, calculateReadingTime } from '@/lib/utils';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 
@@ -63,29 +63,33 @@ export default function BlogPage() {
   return (
     <>
       <Header mobileMenuOpen={mobileMenuOpen} setMobileMenuOpen={setMobileMenuOpen} />
-      <div className="min-h-screen bg-gray-900">
-        <div className="container mx-auto px-4 py-12">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-12">
-            <div>
-              <h1 className="text-4xl font-bold text-gray-100 mb-2">Blog</h1>
-              <p className="text-gray-400">Teknoloji ve yazılım hakkında yazılar</p>
-            </div>
-            <div className="mt-4 md:mt-0">
-              <select
-                value={selectedCategory}
-                onChange={(e) => setSelectedCategory(e.target.value)}
-                className="px-4 py-2 bg-gray-800 border border-gray-700 rounded-xl text-gray-100 focus:outline-none focus:border-primary"
-              >
-                <option value="">Tüm Kategoriler</option>
-                {categories.map(category => (
-                  <option key={category.id} value={category.id}>
-                    {category.name}
-                  </option>
-                ))}
-              </select>
+      <main className="min-h-screen bg-gray-900">
+        <div className="bg-gradient-to-b from-gray-800 to-gray-900 border-b border-gray-800">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center">
+              <div>
+                <h1 className="text-4xl font-bold text-gray-100">Blog</h1>
+                <p className="text-gray-400 mt-2">Teknoloji ve yazılım hakkında yazılar</p>
+              </div>
+              <div className="mt-6 md:mt-0">
+                <select
+                  value={selectedCategory}
+                  onChange={(e) => setSelectedCategory(e.target.value)}
+                  className="w-full md:w-auto px-4 py-2 bg-gray-800 border border-gray-700 rounded-xl text-gray-100 focus:outline-none focus:border-primary"
+                >
+                  <option value="">Tüm Kategoriler</option>
+                  {categories.map(category => (
+                    <option key={category.id} value={category.id}>
+                      {category.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
           </div>
+        </div>
 
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           {loading ? (
             <div className="flex justify-center items-center py-12">
               <div className="flex items-center space-x-2 text-gray-400">
@@ -97,33 +101,36 @@ export default function BlogPage() {
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
               {posts.map((post) => (
                 <article key={post.id} className="bg-gray-800 border border-gray-700 rounded-xl overflow-hidden hover:shadow-lg transition-shadow">
-                  <div className="relative h-48">
-                    <Image
-                      src={post.featured_image || '/images/placeholder.jpg'}
-                      alt={post.title}
-                      fill
-                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                      className="object-cover"
-                    />
-                    {post.category && (
-                      <Link
-                        href={`/blog/category/${post.category.slug}`}
-                        className={`absolute top-4 left-4 px-3 py-1 rounded-full text-sm font-medium ${post.category.color.replace('text', 'bg')}`}
-                      >
-                        {post.category.name}
-                      </Link>
-                    )}
-                  </div>
+                  <Link href={`/blog/${post.slug}`} className="block">
+                    <div className="relative h-48">
+                      <Image
+                        src={post.featured_image || '/images/placeholder.jpg'}
+                        alt={post.title}
+                        fill
+                        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                        className="object-cover"
+                      />
+                      {post.category && (
+                        <div className="absolute top-4 left-4 px-3 py-1 rounded-full text-sm font-medium bg-gray-900/90 text-gray-100">
+                          {post.category.name}
+                        </div>
+                      )}
+                    </div>
+                  </Link>
                   <div className="p-6">
-                    <h2 className="text-xl font-semibold text-gray-100 mb-2 hover:text-primary transition-colors">
-                      <Link href={`/blog/${post.slug}`}>{post.title}</Link>
-                    </h2>
-                    <p className="text-gray-400 text-sm mb-4">{post.content.substring(0, 150)}...</p>
+                    <Link href={`/blog/${post.slug}`} className="block">
+                      <h2 className="text-xl font-semibold text-gray-100 mb-2 hover:text-primary transition-colors">
+                        {post.title}
+                      </h2>
+                      <p className="text-gray-400 text-sm mb-4 line-clamp-2">
+                        {post.content}
+                      </p>
+                    </Link>
                     <div className="flex items-center justify-between">
                       <div className="text-sm text-gray-500">
                         <span>{formatDate(post.created_at)}</span>
                         <span className="mx-2">•</span>
-                        <span>8 dk okuma</span>
+                        <span>{calculateReadingTime(post.content)}</span>
                       </div>
                       <div className="flex space-x-3">
                         <button className="like-btn w-8 h-8 flex items-center justify-center hover:bg-gray-700 rounded-full transition-colors">
@@ -147,7 +154,7 @@ export default function BlogPage() {
             </div>
           )}
         </div>
-      </div>
+      </main>
       <Footer />
     </>
   );

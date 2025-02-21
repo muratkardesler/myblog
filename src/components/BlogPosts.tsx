@@ -12,7 +12,7 @@ export default function BlogPosts() {
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [mounted, setMounted] = useState(false);
-  const postsPerPage = 4;
+  const postsPerPage = 6;
 
   useEffect(() => {
     setMounted(true);
@@ -36,32 +36,35 @@ export default function BlogPosts() {
   }
 
   return (
-    <>
-      <div className="grid md:grid-cols-2 gap-6">
+    <div className="space-y-8">
+      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
         {posts.map(post => (
           <article key={post.id} className="bg-gray-800 border border-gray-700 rounded-xl overflow-hidden hover:shadow-lg transition-shadow">
-            <div className="relative h-48">
-              <Image 
-                src={post.featured_image} 
-                alt={post.title} 
-                fill
-                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                className="object-cover" 
-              />
-              {post.category && (
-                <Link
-                  href={`/category/${post.category.slug}`}
-                  className="absolute top-4 left-4 px-3 py-1 rounded-full text-sm font-medium bg-gray-900/90 text-gray-100 hover:bg-gray-800/90 transition-colors"
-                >
-                  {post.category.name}
-                </Link>
-              )}
-            </div>
+            <Link href={`/blog/${post.slug}`} className="block">
+              <div className="relative h-48">
+                <Image 
+                  src={post.featured_image} 
+                  alt={post.title} 
+                  fill
+                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                  className="object-cover" 
+                />
+                {post.category && (
+                  <div className="absolute top-4 left-4 px-3 py-1 rounded-full text-sm font-medium bg-gray-900/90 text-gray-100">
+                    {post.category.name}
+                  </div>
+                )}
+              </div>
+            </Link>
             <div className="p-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-2 hover:text-primary transition-colors">
-                <Link href={`/blog/${post.slug}`}>{post.title}</Link>
-              </h2>
-              <p className="text-gray-600 text-sm mb-4">{post.content.substring(0, 100)}...</p>
+              <Link href={`/blog/${post.slug}`} className="block">
+                <h2 className="text-xl font-semibold text-gray-100 mb-2 hover:text-primary transition-colors">
+                  {post.title}
+                </h2>
+                <p className="text-gray-400 text-sm mb-4 line-clamp-2">
+                  {post.content}
+                </p>
+              </Link>
               <div className="flex items-center justify-between">
                 <div className="text-sm text-gray-500">
                   {calculateReadingTime(post.content)}
@@ -79,6 +82,7 @@ export default function BlogPosts() {
           </article>
         ))}
       </div>
+
       {loading ? (
         <div className="flex justify-center mt-8">
           <div className="text-primary">Yükleniyor...</div>
@@ -93,6 +97,6 @@ export default function BlogPosts() {
           </button>
         </div>
       )}
-    </>
+    </div>
   );
 } 

@@ -128,6 +128,14 @@ export default function AdminDashboard() {
           </Link>
 
           <Link
+            href="/admin/about"
+            className="flex items-center justify-center bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded-xl p-6 transition-colors group"
+          >
+            <i className="ri-user-6-line text-2xl text-primary group-hover:text-white mr-3"></i>
+            <span className="text-gray-300 group-hover:text-white">Hakkımda</span>
+          </Link>
+
+          <Link
             href="/admin/settings"
             className="flex items-center justify-center bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded-xl p-6 transition-colors group"
           >
