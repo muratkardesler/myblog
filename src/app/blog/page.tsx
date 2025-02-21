@@ -69,7 +69,6 @@ export default function BlogPage() {
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center">
               <div>
                 <h1 className="text-4xl font-bold text-gray-100">Blog</h1>
-                <p className="text-gray-400 mt-2">Teknoloji ve yazılım hakkında yazılar</p>
               </div>
               <div className="mt-6 md:mt-0">
                 <select
