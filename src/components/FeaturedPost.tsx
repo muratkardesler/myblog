@@ -74,16 +74,16 @@ export default function FeaturedPost() {
               </div>
             </div>
             <div className="flex space-x-4">
-              <button 
+              <div 
                 onClick={() => setSelectedPost(post)}
-                className="!rounded-button bg-primary text-white px-6 py-2 hover:bg-purple-600 transition-colors whitespace-nowrap"
+                className="!rounded-button bg-primary text-white px-6 py-2 hover:bg-purple-600 transition-colors whitespace-nowrap cursor-pointer"
               >
                 Devamını Oku
-              </button>
-              <button className="!rounded-button border border-gray-600 px-6 py-2 hover:bg-gray-700 transition-colors whitespace-nowrap flex items-center text-gray-300">
+              </div>
+              <div className="!rounded-button border border-gray-600 px-6 py-2 hover:bg-gray-700 transition-colors whitespace-nowrap flex items-center text-gray-300 cursor-pointer">
                 <i className="ri-share-line mr-2"></i>
                 Paylaş
-              </button>
+              </div>
             </div>
           </div>
           <div className="relative h-[400px]">
@@ -154,19 +154,19 @@ export default function FeaturedPost() {
               {/* Modal Footer */}
               <div className="sticky bottom-0 border-t border-gray-800/50 bg-gray-900/95 backdrop-blur-sm p-4 sm:p-6 flex justify-between items-center rounded-b-2xl">
                 <div className="flex space-x-2 sm:space-x-3">
-                  <button className="flex items-center space-x-2 px-3 sm:px-4 py-2 rounded-xl bg-gray-800 text-gray-300 hover:bg-purple-500/20 hover:text-purple-400 transition-colors">
+                  <div className="flex items-center space-x-2 px-3 sm:px-4 py-2 rounded-xl bg-gray-800 text-gray-300 hover:bg-purple-500/20 hover:text-purple-400 transition-colors cursor-pointer">
                     <i className="ri-heart-line"></i>
                     <span className="hidden sm:inline">Beğen</span>
-                  </button>
-                  <button className="flex items-center space-x-2 px-3 sm:px-4 py-2 rounded-xl bg-gray-800 text-gray-300 hover:bg-purple-500/20 hover:text-purple-400 transition-colors">
+                  </div>
+                  <div className="flex items-center space-x-2 px-3 sm:px-4 py-2 rounded-xl bg-gray-800 text-gray-300 hover:bg-purple-500/20 hover:text-purple-400 transition-colors cursor-pointer">
                     <i className="ri-bookmark-line"></i>
                     <span className="hidden sm:inline">Kaydet</span>
-                  </button>
+                  </div>
                 </div>
-                <button className="flex items-center space-x-2 px-3 sm:px-4 py-2 rounded-xl bg-gray-800 text-gray-300 hover:bg-purple-500/20 hover:text-purple-400 transition-colors">
+                <div className="flex items-center space-x-2 px-3 sm:px-4 py-2 rounded-xl bg-gray-800 text-gray-300 hover:bg-purple-500/20 hover:text-purple-400 transition-colors cursor-pointer">
                   <i className="ri-share-line"></i>
                   <span className="hidden sm:inline">Paylaş</span>
-                </button>
+                </div>
               </div>
             </div>
           </div>
