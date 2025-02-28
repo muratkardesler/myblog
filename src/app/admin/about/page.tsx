@@ -33,7 +33,6 @@ export default function AboutSettingsPage() {
   const [about, setAbout] = useState<About | null>(null);
   const [sections, setSections] = useState<Section[]>([]);
   const [loading, setLoading] = useState(false);
-  const [newSection, setNewSection] = useState(false);
   const supabase = createClientComponentClient();
 
   useEffect(() => {
@@ -84,9 +83,10 @@ export default function AboutSettingsPage() {
       for (const section of sectionsData) {
         if (section.id.startsWith('new_')) {
           // Yeni bölüm
-          const { id, ...newSection } = section;
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          const { id, ...sectionData } = section;
           await supabase.from('sections').insert([{
-            ...newSection,
+            ...sectionData,
             page_id: about?.id
           }]);
         } else {
@@ -102,7 +102,6 @@ export default function AboutSettingsPage() {
       toast.error('Değişiklikler kaydedilirken bir hata oluştu.');
     } finally {
       setLoading(false);
-      setNewSection(false);
     }
   };
 
@@ -120,7 +119,6 @@ export default function AboutSettingsPage() {
         updated_at: new Date().toISOString()
       }
     ]);
-    setNewSection(true);
   };
 
   const handleDeleteSection = async (sectionId: string) => {
@@ -182,10 +180,13 @@ export default function AboutSettingsPage() {
               id="description"
               name="description"
               defaultValue={about?.description}
-              rows={4}
+              rows={6}
               className="w-full px-4 py-2 bg-gray-900 border border-gray-700 rounded-xl text-gray-100 focus:outline-none focus:border-primary"
               placeholder="Kendiniz hakkında kısa bir açıklama"
             />
+            <p className="text-xs text-gray-400 mt-1">
+              Paragraflar oluşturmak için Enter tuşunu kullanabilirsiniz. Her paragraf ayrı olarak görüntülenecektir.
+            </p>
           </div>
 
           <div className="space-y-6">
@@ -240,10 +241,13 @@ export default function AboutSettingsPage() {
                     <textarea
                       name={`section_content_${section.id}`}
                       defaultValue={section.content}
-                      rows={4}
+                      rows={6}
                       className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-xl text-gray-100 focus:outline-none focus:border-primary"
                       placeholder="Bölüm içeriği"
                     />
+                    <p className="text-xs text-gray-400 mt-1">
+                      Paragraflar oluşturmak için Enter tuşunu kullanabilirsiniz. Her paragraf ayrı olarak görüntülenecektir.
+                    </p>
                   </div>
                 </div>
               ))}

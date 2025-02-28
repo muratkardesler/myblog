@@ -97,9 +97,11 @@ export default function AboutPage() {
                 <h2 className="text-3xl font-bold bg-gradient-to-r from-purple-400 to-purple-600 text-transparent bg-clip-text font-display mb-6">
                   {about?.title || 'Merhaba! Ben ' + settings?.admin_name}
                 </h2>
-                <p className="text-gray-300 leading-relaxed text-lg">
-                  {about?.description || settings?.admin_description || 'Hakkımda sayfası içeriği henüz eklenmemiş.'}
-                </p>
+                <div className="text-gray-300 leading-relaxed text-lg space-y-4 whitespace-pre-wrap">
+                  {about?.description?.split('\n').map((paragraph, index) => (
+                    <p key={index}>{paragraph}</p>
+                  )) || settings?.admin_description || 'Hakkımda sayfası içeriği henüz eklenmemiş.'}
+                </div>
               </div>
 
               {sections.filter(section => section.is_active).map(section => (
@@ -108,9 +110,11 @@ export default function AboutPage() {
                     <span className="w-2 h-2 rounded-full bg-purple-500 mr-3"></span>
                     {section.title}
                   </h3>
-                  <p className="text-gray-300 leading-relaxed pl-5">
-                    {section.content}
-                  </p>
+                  <div className="text-gray-300 leading-relaxed pl-5 space-y-4 whitespace-pre-wrap">
+                    {section.content?.split('\n').map((paragraph, index) => (
+                      <p key={index}>{paragraph}</p>
+                    ))}
+                  </div>
                 </div>
               ))}
 

@@ -113,12 +113,12 @@ export default function BlogPage() {
                               </span>
                             </div>
                             <div className="flex space-x-3">
-                              <button className="like-btn w-10 h-10 flex items-center justify-center hover:bg-purple-500/10 rounded-full transition-colors">
+                              <div className="like-btn w-10 h-10 flex items-center justify-center hover:bg-purple-500/10 rounded-full transition-colors cursor-pointer">
                                 <i className="ri-heart-line text-lg text-purple-400"></i>
-                              </button>
-                              <button className="bookmark-btn w-10 h-10 flex items-center justify-center hover:bg-purple-500/10 rounded-full transition-colors">
+                              </div>
+                              <div className="bookmark-btn w-10 h-10 flex items-center justify-center hover:bg-purple-500/10 rounded-full transition-colors cursor-pointer">
                                 <i className="ri-bookmark-line text-lg text-purple-400"></i>
-                              </button>
+                              </div>
                             </div>
                           </div>
                         </div>
@@ -227,19 +227,19 @@ export default function BlogPage() {
               {/* Modal Footer */}
               <div className="sticky bottom-0 border-t border-gray-800/50 bg-gray-900/95 backdrop-blur-sm p-4 sm:p-6 flex justify-between items-center rounded-b-2xl">
                 <div className="flex space-x-2 sm:space-x-3">
-                  <button className="flex items-center space-x-2 px-3 sm:px-4 py-2 rounded-xl bg-gray-800 text-gray-300 hover:bg-purple-500/20 hover:text-purple-400 transition-colors">
+                  <div className="flex items-center space-x-2 px-3 sm:px-4 py-2 rounded-xl bg-gray-800 text-gray-300 hover:bg-purple-500/20 hover:text-purple-400 transition-colors cursor-pointer">
                     <i className="ri-heart-line"></i>
                     <span className="hidden sm:inline">Beğen</span>
-                  </button>
-                  <button className="flex items-center space-x-2 px-3 sm:px-4 py-2 rounded-xl bg-gray-800 text-gray-300 hover:bg-purple-500/20 hover:text-purple-400 transition-colors">
+                  </div>
+                  <div className="flex items-center space-x-2 px-3 sm:px-4 py-2 rounded-xl bg-gray-800 text-gray-300 hover:bg-purple-500/20 hover:text-purple-400 transition-colors cursor-pointer">
                     <i className="ri-bookmark-line"></i>
                     <span className="hidden sm:inline">Kaydet</span>
-                  </button>
+                  </div>
                 </div>
-                <button className="flex items-center space-x-2 px-3 sm:px-4 py-2 rounded-xl bg-gray-800 text-gray-300 hover:bg-purple-500/20 hover:text-purple-400 transition-colors">
+                <div className="flex items-center space-x-2 px-3 sm:px-4 py-2 rounded-xl bg-gray-800 text-gray-300 hover:bg-purple-500/20 hover:text-purple-400 transition-colors cursor-pointer">
                   <i className="ri-share-line"></i>
                   <span className="hidden sm:inline">Paylaş</span>
-                </button>
+                </div>
               </div>
             </div>
           </div>
