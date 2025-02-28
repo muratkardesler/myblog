@@ -71,12 +71,12 @@ async function Page({ params }: PageProps) {
             </div>
 
             {post.featured_image && (
-              <div className="relative w-full h-96 mb-8">
+              <div className="relative w-full h-96 md:h-[500px] mb-8">
                 <Image
                   src={post.featured_image}
                   alt={post.title}
                   fill
-                  className="object-cover rounded-lg"
+                  className="object-contain md:object-cover rounded-lg"
                   sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                   priority
                 />

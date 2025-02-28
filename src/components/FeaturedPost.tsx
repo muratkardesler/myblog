@@ -86,13 +86,13 @@ export default function FeaturedPost() {
               </div>
             </div>
           </div>
-          <div className="relative h-[400px]">
+          <div className="relative h-[400px] md:h-[450px]">
             <Image
               src={post.featured_image}
               alt={post.title}
               fill
               sizes="(max-width: 768px) 100vw, 50vw"
-              className="object-cover rounded-xl"
+              className="object-contain md:object-cover rounded-xl"
             />
           </div>
         </div>
@@ -113,7 +113,7 @@ export default function FeaturedPost() {
                   src={selectedPost.featured_image || '/images/placeholder.jpg'}
                   alt={selectedPost.title}
                   fill
-                  className="object-cover rounded-t-2xl"
+                  className="object-contain md:object-cover rounded-t-2xl"
                   sizes="(max-width: 1536px) 100vw, 1536px"
                   priority
                 />

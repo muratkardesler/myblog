@@ -41,13 +41,13 @@ export default function BlogPosts() {
         {posts.map(post => (
           <article key={post.id} className="group bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-xl overflow-hidden hover:shadow-xl hover:shadow-purple-500/10 hover:border-purple-500/50 transition-all duration-300">
             <div onClick={() => setSelectedPost(post)} className="block w-full text-left cursor-pointer">
-              <div className="relative h-48">
+              <div className="relative h-48 md:h-56">
                 <Image 
                   src={post.featured_image} 
                   alt={post.title} 
                   fill
                   sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                  className="object-cover group-hover:scale-105 transition-transform duration-300" 
+                  className="object-contain md:object-cover group-hover:scale-105 transition-transform duration-300" 
                 />
                 {post.category && (
                   <div className="absolute top-4 left-4 px-4 py-1.5 rounded-full text-sm font-medium bg-purple-600/90 text-white backdrop-blur-sm">
@@ -111,7 +111,7 @@ export default function BlogPosts() {
                   src={selectedPost.featured_image || '/images/placeholder.jpg'}
                   alt={selectedPost.title}
                   fill
-                  className="object-cover rounded-t-2xl"
+                  className="object-contain md:object-cover rounded-t-2xl"
                   sizes="(max-width: 1536px) 100vw, 1536px"
                   priority
                 />
