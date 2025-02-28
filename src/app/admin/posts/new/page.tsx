@@ -12,10 +12,12 @@ import RichTextEditor from '@/components/RichTextEditor'
 interface PostFormData {
   title: string
   content: string
+  excerpt: string
   featured_image: string
   category_id: string
   status: 'draft' | 'published'
   is_featured: boolean
+  is_popular: boolean
 }
 
 export default function NewPostPage() {
@@ -27,10 +29,12 @@ export default function NewPostPage() {
   const [formData, setFormData] = useState<PostFormData>({
     title: '',
     content: '',
+    excerpt: '',
     featured_image: '',
     category_id: '',
     status: 'draft',
-    is_featured: false
+    is_featured: false,
+    is_popular: false
   })
 
   useEffect(() => {
@@ -125,6 +129,7 @@ export default function NewPostPage() {
           .eq('is_featured', true)
       }
 
+      const timestamp = new Date().getTime().toString().slice(-6)
       const slug = formData.title
         .toLowerCase()
         .replace(/ğ/g, 'g')
@@ -135,13 +140,18 @@ export default function NewPostPage() {
         .replace(/ç/g, 'c')
         .replace(/[^a-z0-9]/g, '-')
         .replace(/-+/g, '-')
-        .replace(/^-|-$/g, '')
+        .replace(/^-|-$/g, '') + 
+        '-' + timestamp
+
+      const excerpt = formData.excerpt || formData.content.substring(0, 150) + '...'
 
       const postData = {
         ...formData,
+        excerpt,
         slug,
         created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
+        published_at: formData.status === 'published' ? new Date().toISOString() : null
       }
 
       const { error } = await supabase
@@ -152,9 +162,10 @@ export default function NewPostPage() {
 
       toast.success('Yazı başarıyla oluşturuldu.')
       router.push('/admin/posts')
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error creating post:', error)
-      toast.error('Yazı oluşturulurken bir hata oluştu.')
+      const errorMessage = error instanceof Error ? error.message : 'Bilinmeyen hata'
+      toast.error(`Yazı oluşturulurken bir hata oluştu: ${errorMessage}`)
     } finally {
       setLoading(false)
     }
@@ -191,6 +202,21 @@ export default function NewPostPage() {
               className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-xl text-gray-100 focus:outline-none focus:border-primary"
               placeholder="Yazı başlığı"
               required
+            />
+          </div>
+
+          <div>
+            <label htmlFor="excerpt" className="block text-sm font-medium text-gray-300 mb-1">
+              Özet
+            </label>
+            <textarea
+              id="excerpt"
+              name="excerpt"
+              value={formData.excerpt}
+              onChange={handleChange}
+              rows={2}
+              className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-xl text-gray-100 focus:outline-none focus:border-primary"
+              placeholder="Yazı özeti (boş bırakırsanız içerikten otomatik oluşturulur)"
             />
           </div>
 
@@ -310,6 +336,21 @@ export default function NewPostPage() {
             <p className="mt-1 text-sm text-gray-500">
               Not: Bir yazıyı öne çıkardığınızda, daha önce öne çıkarılmış yazı otomatik olarak kaldırılır.
             </p>
+          </div>
+
+          <div>
+            <label className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                name="is_popular"
+                checked={formData.is_popular}
+                onChange={handleChange}
+                className="w-4 h-4 bg-gray-800 border-gray-700 rounded text-primary focus:ring-primary"
+              />
+              <span className="text-sm text-gray-300">
+                Bu yazıyı popüler olarak işaretle
+              </span>
+            </label>
           </div>
         </div>
 

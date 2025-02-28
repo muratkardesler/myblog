@@ -13,9 +13,12 @@ interface BlogPost {
   title: string
   slug: string
   content: string
+  excerpt: string
   featured_image: string | null
   status: string
   locale: string
+  is_featured: boolean
+  is_popular: boolean
 }
 
 interface EditPostFormProps {
@@ -116,15 +119,21 @@ export default function EditPostForm({ postId }: EditPostFormProps) {
 
     try {
       const now = new Date().toISOString()
+      
+      // İçerikten özet oluştur (eğer kullanıcı girmemişse)
+      const excerpt = post.excerpt || post.content.substring(0, 150) + '...'
 
       const { error: submitError } = await supabase
         .from('posts')
         .update({
           title: post.title,
           content: post.content,
+          excerpt: excerpt,
           featured_image: post.featured_image,
           status: post.status,
           locale: post.locale,
+          is_featured: post.is_featured || false,
+          is_popular: post.is_popular || false,
           updated_at: now,
           published_at: post.status === 'published' ? now : null
         })
@@ -190,6 +199,19 @@ export default function EditPostForm({ postId }: EditPostFormProps) {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
+              Özet
+            </label>
+            <textarea
+              value={post.excerpt || ''}
+              onChange={(e) => setPost({ ...post, excerpt: e.target.value })}
+              rows={2}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              placeholder="Yazı özeti (boş bırakırsanız içerikten otomatik oluşturulur)"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
               Öne Çıkan Görsel
             </label>
             <input
@@ -232,6 +254,34 @@ export default function EditPostForm({ postId }: EditPostFormProps) {
               <option value="draft">Taslak</option>
               <option value="published">Yayınla</option>
             </select>
+          </div>
+
+          <div>
+            <label className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                checked={post.is_featured || false}
+                onChange={(e) => setPost({ ...post, is_featured: e.target.checked })}
+                className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500"
+              />
+              <span className="text-sm text-gray-700">
+                Bu yazıyı anasayfada öne çıkar
+              </span>
+            </label>
+          </div>
+
+          <div>
+            <label className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                checked={post.is_popular || false}
+                onChange={(e) => setPost({ ...post, is_popular: e.target.checked })}
+                className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500"
+              />
+              <span className="text-sm text-gray-700">
+                Bu yazıyı popüler olarak işaretle
+              </span>
+            </label>
           </div>
 
           <div className="flex justify-between space-x-4">
