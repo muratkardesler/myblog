@@ -16,6 +16,7 @@ interface About {
   contact_title: string;
   contact_description: string;
   created_at: string;
+  skills?: string;
 }
 
 interface Section {
@@ -63,6 +64,7 @@ export default function AboutSettingsPage() {
       const aboutData = {
         title: formData.get('title'),
         description: formData.get('description'),
+        skills: formData.get('skills'),
       };
 
       // About verilerini kaydet
@@ -186,6 +188,23 @@ export default function AboutSettingsPage() {
             />
             <p className="text-xs text-gray-400 mt-1">
               Paragraflar oluşturmak için Enter tuşunu kullanabilirsiniz. Her paragraf ayrı olarak görüntülenecektir.
+            </p>
+          </div>
+
+          <div>
+            <label htmlFor="skills" className="block text-sm font-medium text-gray-300 mb-1">
+              Öne Çıkan Yetkinliklerim
+            </label>
+            <textarea
+              id="skills"
+              name="skills"
+              defaultValue={about?.skills}
+              rows={4}
+              className="w-full px-4 py-2 bg-gray-900 border border-gray-700 rounded-xl text-gray-100 focus:outline-none focus:border-primary"
+              placeholder="Next.js, React, TypeScript, Tailwind CSS, Node.js, Supabase, API Development, UI/UX"
+            />
+            <p className="text-xs text-gray-400 mt-1">
+              Yetkinliklerinizi virgülle ayırarak yazın. Örn: Next.js, React, TypeScript, Tailwind CSS
             </p>
           </div>
 

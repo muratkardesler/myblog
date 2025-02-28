@@ -56,6 +56,7 @@ Kod değişikliği yaptığında supabase database yapısını sürekli kontrol 
 - expertise_title (text)
 - contact_title (text)
 - contact_description (text)
+- skills (text)
 
 /* sections tablosu */
 - id (uuid)
