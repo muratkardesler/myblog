@@ -21,6 +21,7 @@ body {
 .blog-content {
   font-family: 'Inter', sans-serif;
   line-height: 1.8;
+  color: #e5e7eb;
 }
 
 .blog-content h1, 
@@ -29,10 +30,13 @@ body {
   font-weight: 700;
   margin-top: 1.5em;
   margin-bottom: 0.75em;
+  color: #f3f4f6;
 }
 
 .blog-content p {
   margin-bottom: 1.25em;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 .blog-content img,
@@ -50,6 +54,15 @@ body {
 .blog-content ol {
   padding-left: 1.5rem;
   margin-bottom: 1.25em;
+  list-style-position: outside;
+}
+
+.blog-content ul {
+  list-style-type: disc;
+}
+
+.blog-content ol {
+  list-style-type: decimal;
 }
 
 .blog-content li {
@@ -66,6 +79,7 @@ body {
   padding-left: 1rem;
   font-style: italic;
   margin: 1.5rem 0;
+  color: #d1d5db;
 }
 
 .blog-content pre {
@@ -75,10 +89,15 @@ body {
   border-radius: 0.5rem;
   overflow-x: auto;
   margin: 1.5rem 0;
+  font-family: 'Courier New', Courier, monospace;
 }
 
 .blog-content code {
   font-family: 'Courier New', Courier, monospace;
+  background-color: rgba(30, 41, 59, 0.5);
+  padding: 0.2em 0.4em;
+  border-radius: 0.25rem;
+  font-size: 0.9em;
 }
 
 /* Emoji ve özel karakterler için stil */
@@ -88,6 +107,7 @@ body {
 
 .blog-content strong {
   font-weight: 700;
+  color: #f3f4f6;
 }
 
 /* Emoji stilleri */
@@ -102,7 +122,7 @@ body {
 
 /* Özel içerik kutuları */
 .blog-content .info-box {
-  background-color: #e0f2fe;
+  background-color: rgba(14, 165, 233, 0.1);
   border-left: 4px solid #0ea5e9;
   padding: 1rem;
   margin: 1.5rem 0;
@@ -110,7 +130,7 @@ body {
 }
 
 .blog-content .warning-box {
-  background-color: #fef3c7;
+  background-color: rgba(245, 158, 11, 0.1);
   border-left: 4px solid #f59e0b;
   padding: 1rem;
   margin: 1.5rem 0;
@@ -118,9 +138,49 @@ body {
 }
 
 .blog-content .tip-box {
-  background-color: #dcfce7;
+  background-color: rgba(34, 197, 94, 0.1);
   border-left: 4px solid #22c55e;
   padding: 1rem;
   margin: 1.5rem 0;
   border-radius: 0.5rem;
+}
+
+/* HTML etiketleri için ek stiller */
+.blog-content p:has(img) {
+  margin: 2rem 0;
+}
+
+.blog-content p:empty {
+  display: none;
+}
+
+.blog-content br {
+  display: block;
+  content: "";
+  margin-top: 0.5em;
+}
+
+/* Tablo stilleri */
+.blog-content table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.5rem 0;
+  overflow-x: auto;
+  display: block;
+}
+
+.blog-content th,
+.blog-content td {
+  border: 1px solid #374151;
+  padding: 0.75rem;
+  text-align: left;
+}
+
+.blog-content th {
+  background-color: #1f2937;
+  font-weight: 600;
+}
+
+.blog-content tr:nth-child(even) {
+  background-color: #111827;
 }
