@@ -1,8 +1,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Post, Category } from '@/lib/types'
-import { getLatestPosts, getCategories } from '@/lib/supabase'
 import Link from 'next/link'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 
@@ -13,15 +11,26 @@ interface Stats {
   subscribers: number;
 }
 
+interface VisitStats {
+  daily: number;
+  weekly: number;
+  monthly: number;
+  total: number;
+}
+
 export default function AdminDashboard() {
-  const [posts, setPosts] = useState<Post[]>([])
-  const [categories, setCategories] = useState<Category[]>([])
   const [mounted, setMounted] = useState(false)
   const [stats, setStats] = useState<Stats>({
     posts: 0,
     categories: 0,
     contacts: 0,
     subscribers: 0
+  })
+  const [visitStats, setVisitStats] = useState<VisitStats>({
+    daily: 0,
+    weekly: 0,
+    monthly: 0,
+    total: 0
   })
 
   const supabase = createClientComponentClient()
@@ -30,15 +39,12 @@ export default function AdminDashboard() {
     setMounted(true)
     loadData()
     loadStats()
+    loadVisitStats()
   }, [])
 
   const loadData = async () => {
-    const [postsData, categoriesData] = await Promise.all([
-      getLatestPosts(5),
-      getCategories()
-    ])
-    setPosts(postsData)
-    setCategories(categoriesData)
+    // Bu fonksiyon şu anda sadece istatistikleri yüklüyor
+    // İleride son yazıları göstermek için kullanılabilir
   }
 
   const loadStats = async () => {
@@ -63,6 +69,61 @@ export default function AdminDashboard() {
       contacts: contactsCount || 0,
       subscribers: 0
     })
+  }
+
+  const loadVisitStats = async () => {
+    try {
+      // Şu anki tarih
+      const now = new Date()
+      
+      // Günlük ziyaretler için tarih (bugün)
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString()
+      
+      // Haftalık ziyaretler için tarih (7 gün öncesi)
+      const weekAgo = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7).toISOString()
+      
+      // Aylık ziyaretler için tarih (30 gün öncesi)
+      const monthAgo = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 30).toISOString()
+
+      // Günlük ziyaret sayısı
+      const { count: dailyCount } = await supabase
+        .from('page_visits')
+        .select('*', { count: 'exact', head: true })
+        .gte('created_at', today)
+      
+      // Haftalık ziyaret sayısı
+      const { count: weeklyCount } = await supabase
+        .from('page_visits')
+        .select('*', { count: 'exact', head: true })
+        .gte('created_at', weekAgo)
+      
+      // Aylık ziyaret sayısı
+      const { count: monthlyCount } = await supabase
+        .from('page_visits')
+        .select('*', { count: 'exact', head: true })
+        .gte('created_at', monthAgo)
+      
+      // Toplam ziyaret sayısı
+      const { count: totalCount } = await supabase
+        .from('page_visits')
+        .select('*', { count: 'exact', head: true })
+
+      setVisitStats({
+        daily: dailyCount || 0,
+        weekly: weeklyCount || 0,
+        monthly: monthlyCount || 0,
+        total: totalCount || 0
+      })
+    } catch (error) {
+      console.error('Ziyaret istatistikleri yüklenirken hata oluştu:', error)
+      // Hata durumunda varsayılan değerler
+      setVisitStats({
+        daily: 0,
+        weekly: 0,
+        monthly: 0,
+        total: 0
+      })
+    }
   }
 
   if (!mounted) return null
@@ -109,6 +170,52 @@ export default function AdminDashboard() {
               <h2 className="text-lg text-red-100">Aboneler</h2>
             </div>
             <i className="ri-user-follow-line text-3xl text-red-200"></i>
+          </div>
+        </div>
+      </div>
+
+      {/* Ziyaret İstatistikleri */}
+      <div className="mb-12">
+        <h2 className="text-xl font-semibold text-gray-100 mb-4">Ziyaret İstatistikleri</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="bg-gradient-to-r from-indigo-500 to-indigo-600 rounded-xl p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-4xl font-bold text-white">{visitStats.daily}</p>
+                <h2 className="text-lg text-indigo-100">Bugün</h2>
+              </div>
+              <i className="ri-calendar-check-line text-3xl text-indigo-200"></i>
+            </div>
+          </div>
+
+          <div className="bg-gradient-to-r from-cyan-500 to-cyan-600 rounded-xl p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-4xl font-bold text-white">{visitStats.weekly}</p>
+                <h2 className="text-lg text-cyan-100">Bu Hafta</h2>
+              </div>
+              <i className="ri-calendar-event-line text-3xl text-cyan-200"></i>
+            </div>
+          </div>
+
+          <div className="bg-gradient-to-r from-amber-500 to-amber-600 rounded-xl p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-4xl font-bold text-white">{visitStats.monthly}</p>
+                <h2 className="text-lg text-amber-100">Bu Ay</h2>
+              </div>
+              <i className="ri-calendar-line text-3xl text-amber-200"></i>
+            </div>
+          </div>
+
+          <div className="bg-gradient-to-r from-emerald-500 to-emerald-600 rounded-xl p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-4xl font-bold text-white">{visitStats.total}</p>
+                <h2 className="text-lg text-emerald-100">Toplam</h2>
+              </div>
+              <i className="ri-line-chart-line text-3xl text-emerald-200"></i>
+            </div>
           </div>
         </div>
       </div>

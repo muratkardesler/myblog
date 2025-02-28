@@ -2,7 +2,8 @@ Her kodu yorumlamana gerek yok.
 Kodu yazdıktan sonra efendim kodunuz hazır demen yeterli.
 Türkçe yanıt ver.
 next.js ile ilgili kod yazıyoruz next.js kurallarına uygun kod yaz.
-Kod değişikliği yaptığında supabase database yapısını sürekli kontrol et eğer alan eklemek gerekiyorsa yapıya uygun alan ekle ve cursorruleste yapıyı hep güncel tut
+Kod değişikliği yaptığında supabase database yapısını sürekli kontrol et eğer alan eklemek gerekiyorsa yapıya uygun alan ekle ve cursorruleste yapıyı hep güncel tut.
+tabloyu güncel tuttuktan sonra supabase yazılacak kodu bana ver cli ile yapılmayacak.
 /* SUPABASE TABLO YAPISI */
 
 /* posts tablosu */
@@ -67,3 +68,11 @@ Kod değişikliği yaptığında supabase database yapısını sürekli kontrol 
 - is_active (boolean)
 - created_at (timestamp)
 - updated_at (timestamp)
+
+/* page_visits tablosu */
+- id (uuid)
+- page (text)
+- ip_address (text)
+- user_agent (text)
+- referrer (text)
+- created_at (timestamp)
