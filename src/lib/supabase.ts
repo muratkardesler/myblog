@@ -79,22 +79,42 @@ export async function getPostsByCategory(categorySlug: string): Promise<Post[]> 
 }
 
 export async function getPopularPosts(limit: number = 3): Promise<Post[]> {
-  const { data, error } = await supabase
-    .from('posts')
-    .select(`
-      *,
-      category:categories(*)
-    `)
-    .eq('status', 'published')
-    .order('published_at', { ascending: false })
-    .limit(limit);
+  try {
+    const { data, error } = await supabase
+      .from('posts')
+      .select(`
+        *,
+        category:categories(*)
+      `)
+      .eq('status', 'published')
+      .eq('is_popular', true)
+      .order('published_at', { ascending: false })
+      .limit(limit);
 
-  if (error) {
-    console.error('Error fetching popular posts:', error);
+    if (error) {
+      console.error('Error fetching popular posts:', error);
+      return [];
+    }
+
+    // Resim URL'lerini kontrol et
+    const validPosts = data?.filter(post => {
+      if (!post.featured_image) return false;
+      
+      try {
+        // URL geçerli mi kontrol et
+        new URL(post.featured_image);
+        return true;
+      } catch {
+        console.error(`Invalid image URL for post ${post.id}:`, post.featured_image);
+        return false;
+      }
+    }) || [];
+
+    return validPosts;
+  } catch (error) {
+    console.error('Unexpected error fetching popular posts:', error);
     return [];
   }
-
-  return data || [];
 }
 
 // Kategori işlemleri için yeni fonksiyonlar

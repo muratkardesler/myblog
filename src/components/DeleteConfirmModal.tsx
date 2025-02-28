@@ -1,22 +1,27 @@
 'use client'
 
-import { FiAlertTriangle } from 'react-icons/fi'
 import { useState } from 'react'
 
 interface DeleteConfirmModalProps {
   isOpen: boolean
   title: string
-  onClose: () => void
-  onConfirm: () => Promise<void>
   message: string
+  confirmText?: string
+  cancelText?: string
+  isLoading?: boolean
+  onConfirm: () => Promise<void>
+  onCancel: () => void
 }
 
 export default function DeleteConfirmModal({
   isOpen,
   title,
-  onClose,
+  message,
+  confirmText = 'Evet, Sil',
+  cancelText = 'İptal',
+  isLoading = false,
   onConfirm,
-  message
+  onCancel
 }: DeleteConfirmModalProps) {
   const [isDeleting, setIsDeleting] = useState(false)
 
@@ -26,7 +31,6 @@ export default function DeleteConfirmModal({
       await onConfirm()
     } finally {
       setIsDeleting(false)
-      onClose()
     }
   }
 
@@ -46,10 +50,10 @@ export default function DeleteConfirmModal({
               <i className="ri-error-warning-line text-3xl text-red-500"></i>
             </div>
             <h3 className="text-xl font-semibold text-gray-100">
-              Yazıyı Sil
+              {title}
             </h3>
             <p className="mt-2 text-gray-400">
-              "{title}" yazısını silmek istediğinize emin misiniz?
+              {message}
             </p>
           </div>
 
@@ -75,19 +79,19 @@ export default function DeleteConfirmModal({
           <div className="flex justify-end space-x-3">
             <button
               type="button"
-              onClick={onClose}
-              disabled={isDeleting}
+              onClick={onCancel}
+              disabled={isDeleting || isLoading}
               className="px-4 py-2 text-gray-400 hover:text-white transition-colors disabled:opacity-50"
             >
-              İptal
+              {cancelText}
             </button>
             <button
               type="button"
               onClick={handleConfirm}
-              disabled={isDeleting}
+              disabled={isDeleting || isLoading}
               className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center"
             >
-              {isDeleting ? (
+              {isDeleting || isLoading ? (
                 <>
                   <i className="ri-loader-4-line animate-spin mr-2"></i>
                   Siliniyor...
@@ -95,7 +99,7 @@ export default function DeleteConfirmModal({
               ) : (
                 <>
                   <i className="ri-delete-bin-line mr-2"></i>
-                  Evet, Sil
+                  {confirmText}
                 </>
               )}
             </button>

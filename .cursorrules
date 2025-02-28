@@ -2,3 +2,67 @@ Her kodu yorumlamana gerek yok.
 Kodu yazdıktan sonra efendim kodunuz hazır demen yeterli.
 Türkçe yanıt ver.
 next.js ile ilgili kod yazıyoruz next.js kurallarına uygun kod yaz.
+Kod değişikliği yaptığında supabase database yapısını sürekli kontrol et eğer alan eklemek gerekiyorsa yapıya uygun alan ekle ve cursorruleste yapıyı hep güncel tut
+/* SUPABASE TABLO YAPISI */
+
+/* posts tablosu */
+- id (uuid)
+- title (text)
+- slug (text)
+- content (text)
+- excerpt (text)
+- featured_image (text)
+- category_id (uuid)
+- status ('draft' | 'published')
+- is_featured (boolean)
+- is_popular (boolean) - Eklendi
+- created_at (timestamp)
+- updated_at (timestamp)
+- published_at (timestamp)
+
+/* categories tablosu */
+- id (uuid)
+- name (text)
+- slug (text)
+- color (text)
+- created_at (timestamp)
+- updated_at (timestamp)
+
+/* settings tablosu */
+- id (uuid)
+- admin_name (text)
+- admin_title (text)
+- admin_description (text)
+- admin_image (text)
+- created_at (timestamp)
+- contact_email (text)
+
+/* contacts tablosu */
+- id (uuid)
+- name (text)
+- email (text)
+- subject (text)
+- message (text)
+- created_at (timestamp)
+
+/* about tablosu */
+- id (uuid)
+- title (text)
+- description (text)
+- what_i_do (text)
+- expertise (text)
+- created_at (timestamp)
+- what_i_do_title (text)
+- expertise_title (text)
+- contact_title (text)
+- contact_description (text)
+
+/* sections tablosu */
+- id (uuid)
+- page_id (uuid)
+- title (text)
+- content (text)
+- order_no (int4)
+- is_active (boolean)
+- created_at (timestamp)
+- updated_at (timestamp)

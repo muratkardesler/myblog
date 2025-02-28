@@ -9,6 +9,7 @@ export interface Post {
   category?: Category;
   status: 'draft' | 'published';
   is_featured: boolean;
+  is_popular: boolean;
   created_at: string;
   updated_at: string;
   published_at: string;
