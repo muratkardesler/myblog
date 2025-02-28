@@ -16,3 +16,111 @@ body {
 .text-gray-600 { color: #9ca3af !important; }
 .text-gray-500 { color: #6b7280 !important; }
 .text-gray-400 { color: #9ca3af !important; }
+
+/* Blog içerik stilleri */
+.blog-content {
+  font-family: 'Inter', sans-serif;
+  line-height: 1.8;
+}
+
+.blog-content h1, 
+.blog-content h2, 
+.blog-content h3 {
+  font-weight: 700;
+  margin-top: 1.5em;
+  margin-bottom: 0.75em;
+}
+
+.blog-content p {
+  margin-bottom: 1.25em;
+}
+
+.blog-content img,
+.blog-image {
+  max-width: 100%;
+  height: auto !important;
+  border-radius: 0.5rem;
+  margin: 1.5rem auto;
+  display: block;
+  position: static !important;
+  object-fit: contain;
+}
+
+.blog-content ul, 
+.blog-content ol {
+  padding-left: 1.5rem;
+  margin-bottom: 1.25em;
+}
+
+.blog-content li {
+  margin-bottom: 0.5em;
+}
+
+.blog-content a {
+  color: #4f46e5;
+  text-decoration: underline;
+}
+
+.blog-content blockquote {
+  border-left: 4px solid #e5e7eb;
+  padding-left: 1rem;
+  font-style: italic;
+  margin: 1.5rem 0;
+}
+
+.blog-content pre {
+  background-color: #1e293b;
+  color: #e2e8f0;
+  padding: 1rem;
+  border-radius: 0.5rem;
+  overflow-x: auto;
+  margin: 1.5rem 0;
+}
+
+.blog-content code {
+  font-family: 'Courier New', Courier, monospace;
+}
+
+/* Emoji ve özel karakterler için stil */
+.blog-content em {
+  font-style: italic;
+}
+
+.blog-content strong {
+  font-weight: 700;
+}
+
+/* Emoji stilleri */
+.blog-content span[role="img"],
+.blog-content .emoji {
+  display: inline-block;
+  font-size: 1.2em;
+  vertical-align: middle;
+  line-height: 1;
+  margin: 0 0.1em;
+}
+
+/* Özel içerik kutuları */
+.blog-content .info-box {
+  background-color: #e0f2fe;
+  border-left: 4px solid #0ea5e9;
+  padding: 1rem;
+  margin: 1.5rem 0;
+  border-radius: 0.5rem;
+}
+
+.blog-content .warning-box {
+  background-color: #fef3c7;
+  border-left: 4px solid #f59e0b;
+  padding: 1rem;
+  margin: 1.5rem 0;
+  border-radius: 0.5rem;
+}
+
+.blog-content .tip-box {
+  background-color: #dcfce7;
+  border-left: 4px solid #22c55e;
+  padding: 1rem;
+  margin: 1.5rem 0;
+  border-radius: 0.5rem;
+}

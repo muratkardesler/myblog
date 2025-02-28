@@ -182,13 +182,39 @@ const MenuBar = ({ editor }: { editor: Editor | null }) => {
 export default function RichTextEditor({ content, onChange }: EditorProps) {
   const editor = useEditor({
     extensions: [
-      StarterKit,
-      Image,
+      StarterKit.configure({
+        heading: {
+          levels: [1, 2, 3],
+        },
+        bulletList: {
+          keepMarks: true,
+          keepAttributes: false,
+        },
+        orderedList: {
+          keepMarks: true,
+          keepAttributes: false,
+        },
+      }),
+      Image.configure({
+        inline: false,
+        allowBase64: true,
+        HTMLAttributes: {
+          class: 'blog-image',
+        },
+      }),
       Link.configure({
         openOnClick: false,
+        HTMLAttributes: {
+          class: 'blog-link',
+          rel: 'noopener noreferrer',
+          target: '_blank',
+        },
       }),
       Youtube.configure({
         controls: true,
+        nocookie: true,
+        progressBarColor: 'white',
+        modestBranding: true,
       }),
       Underline,
       Placeholder.configure({
@@ -199,6 +225,11 @@ export default function RichTextEditor({ content, onChange }: EditorProps) {
     onUpdate: ({ editor }) => {
       onChange(editor.getHTML())
     },
+    editorProps: {
+      attributes: {
+        class: 'prose prose-lg max-w-none focus:outline-none blog-content',
+      },
+    },
   })
 
   return (
@@ -206,7 +237,7 @@ export default function RichTextEditor({ content, onChange }: EditorProps) {
       <MenuBar editor={editor} />
       <EditorContent 
         editor={editor} 
-        className="prose max-w-none p-4 min-h-[400px] focus:outline-none"
+        className="prose max-w-none p-4 min-h-[400px] focus:outline-none blog-content"
       />
     </div>
   )

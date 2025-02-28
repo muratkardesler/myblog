@@ -8,7 +8,55 @@ import { PageProps } from '@/app/types'
 
 export const metadata: Metadata = {
   title: 'Blog Yazısı',
+  viewport: 'width=device-width, initial-scale=1',
 }
+
+// CSS sınıflarını tanımlayalım
+const styles = `
+  .blog-content {
+    font-family: 'Inter', sans-serif;
+    line-height: 1.8;
+  }
+  
+  .blog-content h1, .blog-content h2, .blog-content h3 {
+    font-weight: 700;
+    margin-top: 1.5em;
+    margin-bottom: 0.75em;
+  }
+  
+  .blog-content p {
+    margin-bottom: 1.25em;
+  }
+  
+  .blog-content img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 0.5rem;
+    margin: 1.5rem 0;
+    display: block;
+  }
+  
+  .blog-content ul, .blog-content ol {
+    padding-left: 1.5rem;
+    margin-bottom: 1.25em;
+  }
+  
+  .blog-content li {
+    margin-bottom: 0.5em;
+  }
+  
+  .blog-content a {
+    color: #4f46e5;
+    text-decoration: underline;
+  }
+  
+  .blog-content blockquote {
+    border-left: 4px solid #e5e7eb;
+    padding-left: 1rem;
+    font-style: italic;
+    margin: 1.5rem 0;
+  }
+`
 
 async function Page({ params }: PageProps) {
   try {
@@ -36,6 +84,7 @@ async function Page({ params }: PageProps) {
 
     return (
       <div className="max-w-6xl mx-auto px-4 py-16">
+        <style dangerouslySetInnerHTML={{ __html: styles }} />
         <div className="max-w-3xl mx-auto">
           <Link
             href="/blog"
@@ -84,8 +133,18 @@ async function Page({ params }: PageProps) {
             )}
 
             <div 
-              className="prose lg:prose-lg max-w-none"
-              dangerouslySetInnerHTML={{ __html: post.content }}
+              className="prose lg:prose-lg max-w-none blog-content"
+              dangerouslySetInnerHTML={{ 
+                __html: post.content
+                  // Resimleri düzgün görüntülemek için
+                  .replace(/<img src="(.*?)"(.*?)>/g, '<img src="$1" class="blog-image" $2>')
+                  // Emoji ve özel karakterleri düzgün görüntülemek için
+                  .replace(/&lt;p&gt;(.*?)&lt;\/p&gt;/g, '<p>$1</p>')
+                  // URL'leri düzgün görüntülemek için
+                  .replace(/<a href="(.*?)">/g, '<a href="$1" target="_blank" rel="noopener noreferrer">')
+                  // Emojileri düzgün görüntülemek için
+                  .replace(/📝|✅|🔥|💡|🚀|⚠️|ℹ️|🔍|🔒|🔓|🔴|🟢|🔵|⭐|🌟|✨|💫|💥|💢|💦|💨|💭|💬|💪|👉|👈|👆|👇|👍|👎|👏|🙌|👋|✋|👌|👊|✊|👀|👁️|👄|👅|👂|👃|👣|👤|👥|👶|👦|👧|👨|👩|👱|👴|👵|👲|👳|👮|👷|💂|🕵️|👼|👸|👰|🤵|👰|🤰|👲|🙍|🙎|🙅|🙆|💁|🙋|🙇|🤦|🤷|💆|💇|🚶|🏃|💃|🕺|👯|🧖|🧗|🧘|🛀|🛌|🕴️|🗣️|👤|👥|🫂|👪|👨‍👩‍👧|👨‍👩‍👧‍👦|👨‍👩‍👦‍👦|👨‍👩‍👧‍👧|👨‍👨‍👦|👨‍👨‍👧|👨‍👨‍👧‍👦|👨‍👨‍👦‍👦|👨‍👨‍👧‍👧|👩‍👩‍👦|👩‍👩‍👧|👩‍👩‍👧‍👦|👩‍👩‍👦‍👦|👩‍👩‍👧‍👧|👨‍👦|👨‍👦‍👦|👨‍👧|👨‍👧‍👦|👨‍👧‍👧|👩‍👦|👩‍👦‍👦|👩‍👧|👩‍👧‍👦|👩‍👧‍👧/g, (match: string) => `<span class="emoji" role="img">${match}</span>`)
+              }}
             />
 
           </article>
@@ -98,4 +157,6 @@ async function Page({ params }: PageProps) {
   }
 }
 
-export default Page 
+export default Page
+
+export const dynamic = 'force-dynamic' 
