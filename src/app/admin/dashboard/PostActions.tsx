@@ -60,7 +60,7 @@ export default function PostActions({ postId, postTitle }: PostActionsProps) {
 
       <DeleteConfirmModal
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        onCancel={() => setIsModalOpen(false)}
         onConfirm={handleDelete}
         title="Blog Yazısını Sil"
         message={`"${postTitle}" başlıklı blog yazısını silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.`}
