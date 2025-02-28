@@ -1,12 +1,13 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { Category } from '@/lib/types'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
 import Image from 'next/image'
+import RichTextEditor from '@/components/RichTextEditor'
 
 interface PostFormData {
   title: string
@@ -23,7 +24,6 @@ export default function NewPostPage() {
   const [loading, setLoading] = useState(false)
   const [categories, setCategories] = useState<Category[]>([])
   const [imageUploading, setImageUploading] = useState(false)
-  const contentRef = useRef<HTMLTextAreaElement>(null)
   const [formData, setFormData] = useState<PostFormData>({
     title: '',
     content: '',
@@ -247,28 +247,10 @@ export default function NewPostPage() {
               <label htmlFor="content" className="block text-sm font-medium text-gray-300">
                 İçerik
               </label>
-              <label className="flex items-center space-x-2 text-sm text-gray-400 cursor-pointer hover:text-white transition-colors">
-                <i className="ri-image-add-line"></i>
-                <span>Resim Ekle</span>
-                <input
-                  type="file"
-                  className="hidden"
-                  accept="image/*"
-                  onChange={handleFileChange}
-                  disabled={imageUploading}
-                />
-              </label>
             </div>
-            <textarea
-              ref={contentRef}
-              id="content"
-              name="content"
-              value={formData.content}
-              onChange={handleChange}
-              rows={10}
-              className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-xl text-gray-100 focus:outline-none focus:border-primary"
-              placeholder="Yazınızı buraya girin..."
-              required
+            <RichTextEditor
+              content={formData.content}
+              onChange={(content) => setFormData(prev => ({ ...prev, content }))}
             />
           </div>
 

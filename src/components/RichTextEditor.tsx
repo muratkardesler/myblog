@@ -1,6 +1,6 @@
 'use client'
 
-import { useEditor, EditorContent } from '@tiptap/react'
+import { useEditor, EditorContent, Editor } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Image from '@tiptap/extension-image'
 import Link from '@tiptap/extension-link'
@@ -8,22 +8,66 @@ import Youtube from '@tiptap/extension-youtube'
 import Underline from '@tiptap/extension-underline'
 import Placeholder from '@tiptap/extension-placeholder'
 import { FaBold, FaItalic, FaUnderline, FaListUl, FaListOl, FaLink, FaImage, FaYoutube, FaHeading } from 'react-icons/fa'
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { useState } from 'react'
+import toast from 'react-hot-toast'
 
 interface EditorProps {
   content: string
   onChange: (content: string) => void
 }
 
-const MenuBar = ({ editor }: { editor: any }) => {
+const MenuBar = ({ editor }: { editor: Editor | null }) => {
+  const [uploading, setUploading] = useState(false)
+  const supabase = createClientComponentClient()
+
   if (!editor) {
     return null
   }
 
-  const addImage = () => {
-    const url = window.prompt('URL')
-    if (url) {
-      editor.chain().focus().setImage({ src: url }).run()
+  const uploadImage = async (file: File) => {
+    try {
+      setUploading(true)
+      
+      const fileExt = file.name.split('.').pop()
+      const fileName = `${Math.random()}.${fileExt}`
+      const filePath = `blog-images/${fileName}`
+
+      const { error: uploadError } = await supabase.storage
+        .from('images')
+        .upload(filePath, file)
+
+      if (uploadError) throw uploadError
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('images')
+        .getPublicUrl(filePath)
+
+      editor.chain().focus().setImage({ src: publicUrl }).run()
+      toast.success('Görsel başarıyla eklendi.')
+    } catch (error) {
+      console.error('Görsel yükleme hatası:', error)
+      toast.error('Görsel yüklenirken bir hata oluştu.')
+    } finally {
+      setUploading(false)
     }
+  }
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    if (!file.type.startsWith('image/')) {
+      toast.error('Lütfen sadece görsel dosyası yükleyin.')
+      return
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Görsel boyutu 5MB\'dan küçük olmalıdır.')
+      return
+    }
+
+    uploadImage(file)
   }
 
   const addYoutubeVideo = () => {
@@ -98,14 +142,31 @@ const MenuBar = ({ editor }: { editor: any }) => {
       >
         <FaLink />
       </button>
-      <button
-        type="button"
-        onClick={addImage}
-        className="p-2 rounded hover:bg-gray-100"
-        title="Görsel Ekle"
-      >
-        <FaImage />
-      </button>
+      <div className="relative">
+        <button
+          type="button"
+          className={`p-2 rounded hover:bg-gray-100 ${uploading ? 'opacity-50' : ''}`}
+          title="Görsel Ekle"
+          disabled={uploading}
+        >
+          <label className="cursor-pointer">
+            <FaImage />
+            <input 
+              type="file" 
+              className="hidden" 
+              accept="image/*" 
+              onChange={handleFileUpload}
+              disabled={uploading}
+            />
+          </label>
+        </button>
+        {uploading && (
+          <span className="absolute -top-1 -right-1 flex h-3 w-3">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-3 w-3 bg-primary"></span>
+          </span>
+        )}
+      </div>
       <button
         type="button"
         onClick={addYoutubeVideo}

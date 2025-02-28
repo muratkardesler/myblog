@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import RichTextEditor from '@/components/RichTextEditor'
 import DeletePostButton from '../DeletePostButton'
+import toast from 'react-hot-toast'
 
 interface BlogPost {
   id: string
@@ -131,6 +132,7 @@ export default function EditPostForm({ postId }: EditPostFormProps) {
 
       if (submitError) throw submitError
 
+      toast.success('Blog yazısı başarıyla güncellendi.')
       router.push('/admin/dashboard')
     } catch (error) {
       if (error instanceof Error) {
