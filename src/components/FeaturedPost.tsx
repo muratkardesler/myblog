@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Post } from '@/lib/types';
-import { getFeaturedPost } from '@/lib/supabase';
+import { getFeaturedPost, likePost, getPostLikes } from '@/lib/supabase';
 import { calculateReadingTime, formatDate } from '@/lib/utils';
 import { supabase } from '@/lib/supabase';
 import Image from 'next/image';
@@ -18,11 +18,20 @@ export default function FeaturedPost() {
   const [settings, setSettings] = useState<Settings | null>(null);
   const [mounted, setMounted] = useState(false);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
+  const [likesCount, setLikesCount] = useState(0);
+  const [isLiked, setIsLiked] = useState(false);
+  const [isLiking, setIsLiking] = useState(false);
 
   useEffect(() => {
     setMounted(true);
     loadData();
   }, []);
+
+  useEffect(() => {
+    if (post) {
+      loadLikes();
+    }
+  }, [post]);
 
   const loadData = async () => {
     const [featuredPost, { data: settingsData }] = await Promise.all([
@@ -32,6 +41,33 @@ export default function FeaturedPost() {
 
     setPost(featuredPost);
     setSettings(settingsData);
+  };
+
+  const loadLikes = async () => {
+    if (!post) return;
+    const count = await getPostLikes(post.id);
+    setLikesCount(count);
+  };
+
+  const handleLike = async () => {
+    if (!post || isLiking) return;
+    
+    setIsLiking(true);
+    try {
+      // IP adresi ve user agent bilgisini almak için basit bir API çağrısı yapıyoruz
+      const response = await fetch('/api/visitor-info');
+      const { ip, userAgent } = await response.json();
+      
+      const liked = await likePost(post.id, ip, userAgent);
+      setIsLiked(liked);
+      
+      // Beğeni sayısını güncelle
+      loadLikes();
+    } catch (error) {
+      console.error('Error liking post:', error);
+    } finally {
+      setIsLiking(false);
+    }
   };
 
   if (!mounted || !post) return null;
@@ -80,7 +116,20 @@ export default function FeaturedPost() {
               >
                 Devamını Oku
               </div>
-              <div className="!rounded-button border border-gray-600 px-6 py-2 hover:bg-gray-700 transition-colors whitespace-nowrap flex items-center text-gray-300 cursor-pointer">
+              <div 
+                onClick={handleLike}
+                className="!rounded-button border border-gray-600 px-6 py-2 hover:bg-gray-700 transition-colors whitespace-nowrap flex items-center text-gray-300 cursor-pointer"
+              >
+                <i className={`${isLiked ? 'ri-heart-fill text-red-500' : 'ri-heart-line'} mr-2`}></i>
+                {likesCount > 0 ? likesCount : 'Beğen'}
+              </div>
+              <div 
+                onClick={() => {
+                  // Direkt manuel paylaşım menüsünü aç
+                  manualShare(post.title, post.excerpt || post.title, window.location.origin + '/blog/' + post.slug);
+                }}
+                className="!rounded-button border border-gray-600 px-6 py-2 hover:bg-gray-700 transition-colors whitespace-nowrap flex items-center text-gray-300 cursor-pointer"
+              >
                 <i className="ri-share-line mr-2"></i>
                 Paylaş
               </div>
@@ -155,16 +204,22 @@ export default function FeaturedPost() {
               {/* Modal Footer */}
               <div className="sticky bottom-0 border-t border-gray-800/50 bg-gray-900/95 backdrop-blur-sm p-4 sm:p-6 flex justify-between items-center rounded-b-2xl">
                 <div className="flex space-x-2 sm:space-x-3">
-                  <div className="flex items-center space-x-2 px-3 sm:px-4 py-2 rounded-xl bg-gray-800 text-gray-300 hover:bg-purple-500/20 hover:text-purple-400 transition-colors cursor-pointer">
-                    <i className="ri-heart-line"></i>
-                    <span className="hidden sm:inline">Beğen</span>
-                  </div>
-                  <div className="flex items-center space-x-2 px-3 sm:px-4 py-2 rounded-xl bg-gray-800 text-gray-300 hover:bg-purple-500/20 hover:text-purple-400 transition-colors cursor-pointer">
-                    <i className="ri-bookmark-line"></i>
-                    <span className="hidden sm:inline">Kaydet</span>
+                  <div 
+                    onClick={handleLike}
+                    className={`flex items-center space-x-2 px-3 sm:px-4 py-2 rounded-xl bg-gray-800 text-gray-300 hover:bg-purple-500/20 hover:text-purple-400 transition-colors cursor-pointer ${isLiked ? 'bg-purple-500/20 text-purple-400' : ''}`}
+                  >
+                    <i className={`${isLiked ? 'ri-heart-fill text-red-500' : 'ri-heart-line'}`}></i>
+                    <span className="hidden sm:inline">{isLiked ? 'Beğenildi' : 'Beğen'}</span>
+                    {likesCount > 0 && <span className="ml-1">({likesCount})</span>}
                   </div>
                 </div>
-                <div className="flex items-center space-x-2 px-3 sm:px-4 py-2 rounded-xl bg-gray-800 text-gray-300 hover:bg-purple-500/20 hover:text-purple-400 transition-colors cursor-pointer">
+                <div 
+                  onClick={() => {
+                    // Direkt manuel paylaşım menüsünü aç
+                    manualShare(selectedPost.title, selectedPost.excerpt || selectedPost.title, window.location.origin + '/blog/' + selectedPost.slug);
+                  }}
+                  className="flex items-center space-x-2 px-3 sm:px-4 py-2 rounded-xl bg-gray-800 text-gray-300 hover:bg-purple-500/20 hover:text-purple-400 transition-colors cursor-pointer"
+                >
                   <i className="ri-share-line"></i>
                   <span className="hidden sm:inline">Paylaş</span>
                 </div>
@@ -175,4 +230,84 @@ export default function FeaturedPost() {
       )}
     </>
   );
-} 
+}
+
+// Manuel paylaşım fonksiyonu
+const manualShare = (title: string, text: string, url: string) => {
+  const shareOptions = document.createElement('div');
+  shareOptions.className = 'fixed inset-0 z-[60] flex items-center justify-center bg-black/70 backdrop-blur-sm';
+  
+  shareOptions.innerHTML = `
+    <div class="bg-gray-800 rounded-xl p-6 max-w-sm w-full mx-4 animate-slide-up">
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="text-lg font-medium text-white">Paylaş</h3>
+        <button class="text-gray-400 hover:text-white" id="close-share">
+          <i class="ri-close-line text-xl"></i>
+        </button>
+      </div>
+      <div class="grid grid-cols-4 gap-4 mb-6">
+        <a href="https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}" target="_blank" rel="noopener noreferrer" class="flex flex-col items-center">
+          <div class="w-12 h-12 rounded-full bg-blue-600 flex items-center justify-center mb-1">
+            <i class="ri-facebook-fill text-white text-xl"></i>
+          </div>
+          <span class="text-xs text-gray-300">Facebook</span>
+        </a>
+        <a href="https://twitter.com/intent/tweet?text=${encodeURIComponent(title)}&url=${encodeURIComponent(url)}" target="_blank" rel="noopener noreferrer" class="flex flex-col items-center">
+          <div class="w-12 h-12 rounded-full bg-sky-500 flex items-center justify-center mb-1">
+            <i class="ri-twitter-fill text-white text-xl"></i>
+          </div>
+          <span class="text-xs text-gray-300">Twitter</span>
+        </a>
+        <a href="https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}" target="_blank" rel="noopener noreferrer" class="flex flex-col items-center">
+          <div class="w-12 h-12 rounded-full bg-blue-700 flex items-center justify-center mb-1">
+            <i class="ri-linkedin-fill text-white text-xl"></i>
+          </div>
+          <span class="text-xs text-gray-300">LinkedIn</span>
+        </a>
+        <a href="https://api.whatsapp.com/send?text=${encodeURIComponent(title + ' ' + url)}" target="_blank" rel="noopener noreferrer" class="flex flex-col items-center">
+          <div class="w-12 h-12 rounded-full bg-green-500 flex items-center justify-center mb-1">
+            <i class="ri-whatsapp-fill text-white text-xl"></i>
+          </div>
+          <span class="text-xs text-gray-300">WhatsApp</span>
+        </a>
+      </div>
+      <div class="relative flex items-center">
+        <input type="text" value="${url}" readonly class="w-full bg-gray-700 border border-gray-600 rounded-lg py-2 pl-3 pr-20 text-white text-sm" id="share-url" />
+        <button class="absolute right-2 px-3 py-1 text-sm text-purple-400 hover:text-purple-300 bg-gray-800 rounded" id="copy-url">
+          Kopyala
+        </button>
+      </div>
+    </div>
+  `;
+  
+  document.body.appendChild(shareOptions);
+  
+  // Kapat butonu
+  document.getElementById('close-share')?.addEventListener('click', () => {
+    document.body.removeChild(shareOptions);
+  });
+  
+  // Dışarı tıklama
+  shareOptions.addEventListener('click', (e) => {
+    if (e.target === shareOptions) {
+      document.body.removeChild(shareOptions);
+    }
+  });
+  
+  // URL kopyalama
+  document.getElementById('copy-url')?.addEventListener('click', () => {
+    const urlInput = document.getElementById('share-url') as HTMLInputElement;
+    urlInput.select();
+    navigator.clipboard.writeText(urlInput.value)
+      .then(() => {
+        const copyBtn = document.getElementById('copy-url');
+        if (copyBtn) {
+          copyBtn.textContent = 'Kopyalandı!';
+          setTimeout(() => {
+            copyBtn.textContent = 'Kopyala';
+          }, 2000);
+        }
+      })
+      .catch(err => console.error('Kopyalama hatası:', err));
+  });
+}; 

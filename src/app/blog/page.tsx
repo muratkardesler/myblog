@@ -3,37 +3,50 @@
 import { useState, useEffect } from 'react';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { Post, Category } from '@/lib/types';
-import Image from 'next/image';
+import { getCategoriesWithPostCount } from '@/lib/supabase';
 import { formatDate, calculateReadingTime } from '@/lib/utils';
+import Image from 'next/image';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
+import { getLatestPosts, getPostsByCategory } from '@/lib/supabase';
+import Link from 'next/link';
+import BlogPosts from '@/components/BlogPosts';
 
 export default function BlogPage() {
   const [posts, setPosts] = useState<Post[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState<string>('');
+  const [categories, setCategories] = useState<(Category & { post_count: number })[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState('');
   const [loading, setLoading] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
+  const [mounted, setMounted] = useState(false);
   const supabase = createClientComponentClient();
 
   useEffect(() => {
+    setMounted(true);
     loadData();
-  }, [selectedCategory]);
+  }, []);
+
+  useEffect(() => {
+    if (mounted) {
+      loadPosts();
+    }
+  }, [selectedCategory, mounted]);
 
   const loadData = async () => {
     try {
+      // Kategorileri yükle
+      const categoriesData = await getCategoriesWithPostCount();
+      setCategories(categoriesData);
+    } catch (error) {
+      console.error('Error loading data:', error);
+    }
+  };
+
+  const loadPosts = async () => {
+    try {
       setLoading(true);
       
-      // Kategorileri yükle
-      const { data: categoriesData, error: categoriesError } = await supabase
-        .from('categories')
-        .select('*')
-        .order('name');
-
-      if (categoriesError) throw categoriesError;
-      setCategories(categoriesData || []);
-
       // Yazıları yükle
       let query = supabase
         .from('posts')
@@ -169,28 +182,45 @@ export default function BlogPage() {
             <div className="lg:col-span-1">
               <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-2xl p-8 sticky top-24">
                 <h3 className="text-2xl font-bold text-white mb-6">Kategoriler</h3>
-                <div className="space-y-2">
+                <div className="space-y-3">
                   <button
                     onClick={() => setSelectedCategory('')}
-                    className={`w-full text-left px-6 py-3 rounded-xl transition-all duration-300 ${
+                    className={`w-full text-left px-6 py-3 rounded-xl transition-all duration-300 flex items-center justify-between ${
                       selectedCategory === '' 
                         ? 'bg-purple-600 text-white font-medium shadow-lg shadow-purple-500/20' 
                         : 'text-gray-300 hover:bg-purple-500/10 hover:text-white'
                     }`}
                   >
-                    Tüm Yazılar
+                    <span className="flex items-center">
+                      <i className="ri-apps-line mr-3"></i>
+                      Tüm Yazılar
+                    </span>
+                    <span className="bg-gray-700/50 text-gray-300 text-xs px-2 py-1 rounded-full">
+                      {categories.reduce((total, cat) => total + (cat.post_count || 0), 0)}
+                    </span>
                   </button>
+                  
                   {categories.map(category => (
                     <button
                       key={category.id}
-                      onClick={() => setSelectedCategory(category.id)}
-                      className={`w-full text-left px-6 py-3 rounded-xl transition-all duration-300 ${
-                        selectedCategory === category.id 
+                      onClick={() => setSelectedCategory(category.slug)}
+                      className={`w-full text-left px-6 py-3 rounded-xl transition-all duration-300 flex items-center justify-between ${
+                        selectedCategory === category.slug 
                           ? 'bg-purple-600 text-white font-medium shadow-lg shadow-purple-500/20' 
                           : 'text-gray-300 hover:bg-purple-500/10 hover:text-white'
                       }`}
                     >
-                      {category.name}
+                      <span className="flex items-center">
+                        <i className={`ri-folder-line mr-3 ${category.color}`}></i>
+                        {category.name}
+                      </span>
+                      <span className={`${
+                        selectedCategory === category.slug 
+                          ? 'bg-purple-700/50 text-white' 
+                          : 'bg-gray-700/50 text-gray-300'
+                        } text-xs px-2 py-1 rounded-full`}>
+                        {category.post_count}
+                      </span>
                     </button>
                   ))}
                 </div>

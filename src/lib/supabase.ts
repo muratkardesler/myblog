@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import { Post, Category } from './types';
+import { Post, Category, PostLike } from './types';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -57,6 +57,48 @@ export async function getCategories(): Promise<Category[]> {
   }
 
   return data || [];
+}
+
+export async function getCategoriesWithPostCount(): Promise<(Category & { post_count: number })[]> {
+  try {
+    // Önce tüm kategorileri al
+    const { data: categories, error: categoriesError } = await supabase
+      .from('categories')
+      .select('*')
+      .order('name');
+
+    if (categoriesError) {
+      console.error('Error fetching categories:', categoriesError);
+      return [];
+    }
+
+    if (!categories || categories.length === 0) {
+      return [];
+    }
+
+    // Her kategori için yazı sayısını al
+    const categoriesWithCount = await Promise.all(
+      categories.map(async (category) => {
+        const { count, error: countError } = await supabase
+          .from('posts')
+          .select('*', { count: 'exact', head: true })
+          .eq('category_id', category.id)
+          .eq('status', 'published');
+
+        if (countError) {
+          console.error(`Error fetching post count for category ${category.id}:`, countError);
+          return { ...category, post_count: 0 };
+        }
+
+        return { ...category, post_count: count || 0 };
+      })
+    );
+
+    return categoriesWithCount;
+  } catch (error) {
+    console.error('Error fetching categories with post count:', error);
+    return [];
+  }
 }
 
 export async function getPostsByCategory(categorySlug: string): Promise<Post[]> {
@@ -221,4 +263,71 @@ export async function deletePost(id: string): Promise<boolean> {
   }
 
   return true;
+}
+
+export async function getPostLikes(postId: string): Promise<number> {
+  const { count, error } = await supabase
+    .from('post_likes')
+    .select('*', { count: 'exact', head: true })
+    .eq('post_id', postId);
+
+  if (error) {
+    console.error('Error fetching post likes:', error);
+    return 0;
+  }
+
+  return count || 0;
+}
+
+export async function checkIfUserLikedPost(postId: string, ipAddress: string, userAgent: string): Promise<boolean> {
+  const { data, error } = await supabase
+    .from('post_likes')
+    .select('*')
+    .eq('post_id', postId)
+    .eq('ip_address', ipAddress)
+    .maybeSingle();
+
+  if (error) {
+    console.error('Error checking if user liked post:', error);
+    return false;
+  }
+
+  return !!data;
+}
+
+export async function likePost(postId: string, ipAddress: string, userAgent: string): Promise<boolean> {
+  // Önce kullanıcının daha önce beğenip beğenmediğini kontrol et
+  const alreadyLiked = await checkIfUserLikedPost(postId, ipAddress, userAgent);
+  
+  if (alreadyLiked) {
+    // Kullanıcı zaten beğenmiş, beğeniyi kaldır
+    const { error } = await supabase
+      .from('post_likes')
+      .delete()
+      .eq('post_id', postId)
+      .eq('ip_address', ipAddress);
+
+    if (error) {
+      console.error('Error removing like:', error);
+      return false;
+    }
+    
+    return false; // Beğeni kaldırıldı
+  } else {
+    // Yeni beğeni ekle
+    const { error } = await supabase
+      .from('post_likes')
+      .insert({
+        post_id: postId,
+        ip_address: ipAddress,
+        user_agent: userAgent
+      });
+
+    if (error) {
+      console.error('Error adding like:', error);
+      return false;
+    }
+    
+    return true; // Beğeni eklendi
+  }
 } 

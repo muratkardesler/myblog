@@ -13,6 +13,7 @@ export interface Post {
   created_at: string;
   updated_at: string;
   published_at: string;
+  likes_count?: number;
 }
 
 export interface Category {
@@ -22,8 +23,17 @@ export interface Category {
   color: string;
   created_at: string;
   updated_at: string;
+  post_count?: number;
 }
 
 export interface PostWithCategory extends Post {
   category: Category;
+}
+
+export interface PostLike {
+  id: string;
+  post_id: string;
+  ip_address: string;
+  user_agent: string;
+  created_at: string;
 } 

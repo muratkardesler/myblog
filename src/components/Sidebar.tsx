@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Post, Category } from '@/lib/types';
-import { getPopularPosts, getCategories } from '@/lib/supabase';
+import { getPopularPosts, getCategoriesWithPostCount } from '@/lib/supabase';
 import { formatDate } from '@/lib/utils';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
@@ -18,7 +18,7 @@ interface Settings {
 
 function Sidebar() {
   const [popularPosts, setPopularPosts] = useState<Post[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
+  const [categories, setCategories] = useState<(Category & { post_count: number })[]>([]);
   const [settings, setSettings] = useState<Settings | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -31,7 +31,7 @@ function Sidebar() {
         
         // Kategorileri ve ayarları yükle
         const [categoriesData, { data: settingsData }] = await Promise.all([
-          getCategories(),
+          getCategoriesWithPostCount(),
           supabase.from('settings').select('*').single()
         ]);
 
@@ -111,14 +111,17 @@ function Sidebar() {
               <Link
                 key={category.id}
                 href={`/category/${category.slug}`}
-                className="bg-gray-700 hover:bg-gray-600 transition-colors rounded-lg p-3 text-center group"
+                className="bg-gray-700/50 hover:bg-gray-600/70 transition-all duration-300 rounded-lg p-3 text-center group border border-gray-600/30 hover:border-purple-500/30 hover:shadow-lg hover:shadow-purple-500/10"
               >
                 <div className="flex flex-col items-center">
-                  <div className={`w-10 h-10 rounded-full mb-2 flex items-center justify-center ${category.color.replace('text-', 'bg-').replace('00', '700')}`}>
-                    <i className={`ri-folder-line text-white`}></i>
+                  <div className={`w-12 h-12 rounded-full mb-2 flex items-center justify-center ${category.color.replace('text-', 'bg-').replace('00', '700')}`}>
+                    <i className={`ri-folder-line text-white text-xl`}></i>
                   </div>
-                  <span className="text-gray-100 group-hover:text-primary transition-colors">
+                  <span className="text-gray-100 group-hover:text-purple-400 transition-colors font-medium">
                     {category.name}
+                  </span>
+                  <span className="text-xs text-gray-400 mt-1 group-hover:text-purple-300">
+                    {category.post_count} {category.post_count === 1 ? 'yazı' : 'yazı'}
                   </span>
                 </div>
               </Link>

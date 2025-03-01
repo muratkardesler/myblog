@@ -30,6 +30,15 @@ tabloyu güncel tuttuktan sonra supabase yazılacak kodu bana ver cli ile yapıl
 - created_at (timestamp)
 - updated_at (timestamp)
 
+/* categories_with_post_count view */
+- id (uuid)
+- name (text)
+- slug (text)
+- color (text)
+- created_at (timestamp)
+- updated_at (timestamp)
+- post_count (integer)
+
 /* settings tablosu */
 - id (uuid)
 - admin_name (text)
@@ -76,4 +85,11 @@ tabloyu güncel tuttuktan sonra supabase yazılacak kodu bana ver cli ile yapıl
 - ip_address (text)
 - user_agent (text)
 - referrer (text)
+- created_at (timestamp)
+
+/* post_likes tablosu */
+- id (uuid)
+- post_id (uuid)
+- ip_address (text)
+- user_agent (text)
 - created_at (timestamp)
