@@ -9,12 +9,32 @@ import Underline from '@tiptap/extension-underline'
 import Placeholder from '@tiptap/extension-placeholder'
 import { FaBold, FaItalic, FaUnderline, FaListUl, FaListOl, FaLink, FaImage, FaYoutube, FaHeading } from 'react-icons/fa'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import toast from 'react-hot-toast'
 
 interface EditorProps {
   content: string
   onChange: (content: string) => void
+}
+
+// HTML içeriğini düzgün şekilde parse eden yardımcı fonksiyon
+function parseHtmlContent(content: string): string {
+  if (!content) return '';
+  
+  // HTML etiketlerini düzgün şekilde parse et
+  let parsedContent = content;
+  
+  // Eğer içerik HTML etiketleri içeriyorsa ancak düz metin olarak görünüyorsa
+  if (content.includes('&lt;') || content.includes('&gt;')) {
+    parsedContent = content
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'")
+      .replace(/&amp;/g, '&');
+  }
+  
+  return parsedContent;
 }
 
 const MenuBar = ({ editor }: { editor: Editor | null }) => {
@@ -53,124 +73,118 @@ const MenuBar = ({ editor }: { editor: Editor | null }) => {
     }
   }
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-
-    if (!file.type.startsWith('image/')) {
-      toast.error('Lütfen sadece görsel dosyası yükleyin.')
-      return
-    }
-
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error('Görsel boyutu 5MB\'dan küçük olmalıdır.')
-      return
-    }
-
-    uploadImage(file)
-  }
-
   const addYoutubeVideo = () => {
-    const url = window.prompt('YouTube URL')
+    const url = prompt('YouTube video URL\'sini girin:')
+    
     if (url) {
-      editor.chain().focus().setYoutubeVideo({ src: url }).run()
+      editor.commands.setYoutubeVideo({
+        src: url,
+        width: 640,
+        height: 480,
+      })
     }
   }
 
   const setLink = () => {
-    const url = window.prompt('URL')
-    if (url) {
-      editor.chain().focus().setLink({ href: url }).run()
+    const previousUrl = editor.getAttributes('link').href
+    const url = window.prompt('URL:', previousUrl)
+
+    // cancelled
+    if (url === null) {
+      return
     }
+
+    // empty
+    if (url === '') {
+      editor.chain().focus().extendMarkRange('link').unsetLink().run()
+      return
+    }
+
+    // update link
+    editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run()
   }
 
   return (
-    <div className="border border-gray-300 rounded-t-lg p-2 bg-white flex flex-wrap gap-2">
+    <div className="flex flex-wrap items-center gap-1 p-2 border-b border-gray-700 bg-gray-800 rounded-t-lg">
       <button
-        type="button"
         onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
-        className={`p-2 rounded hover:bg-gray-100 ${editor.isActive('heading', { level: 2 }) ? 'bg-gray-200' : ''}`}
+        className={`p-2 rounded hover:bg-gray-700 ${editor.isActive('heading', { level: 2 }) ? 'bg-gray-700 text-white' : 'text-gray-300'}`}
         title="Başlık"
       >
         <FaHeading />
       </button>
+      
       <button
-        type="button"
         onClick={() => editor.chain().focus().toggleBold().run()}
-        className={`p-2 rounded hover:bg-gray-100 ${editor.isActive('bold') ? 'bg-gray-200' : ''}`}
+        className={`p-2 rounded hover:bg-gray-700 ${editor.isActive('bold') ? 'bg-gray-700 text-white' : 'text-gray-300'}`}
         title="Kalın"
       >
         <FaBold />
       </button>
+      
       <button
-        type="button"
         onClick={() => editor.chain().focus().toggleItalic().run()}
-        className={`p-2 rounded hover:bg-gray-100 ${editor.isActive('italic') ? 'bg-gray-200' : ''}`}
+        className={`p-2 rounded hover:bg-gray-700 ${editor.isActive('italic') ? 'bg-gray-700 text-white' : 'text-gray-300'}`}
         title="İtalik"
       >
         <FaItalic />
       </button>
+      
       <button
-        type="button"
         onClick={() => editor.chain().focus().toggleUnderline().run()}
-        className={`p-2 rounded hover:bg-gray-100 ${editor.isActive('underline') ? 'bg-gray-200' : ''}`}
+        className={`p-2 rounded hover:bg-gray-700 ${editor.isActive('underline') ? 'bg-gray-700 text-white' : 'text-gray-300'}`}
         title="Altı Çizili"
       >
         <FaUnderline />
       </button>
+      
+      <div className="w-px h-6 mx-1 bg-gray-600"></div>
+      
       <button
-        type="button"
         onClick={() => editor.chain().focus().toggleBulletList().run()}
-        className={`p-2 rounded hover:bg-gray-100 ${editor.isActive('bulletList') ? 'bg-gray-200' : ''}`}
+        className={`p-2 rounded hover:bg-gray-700 ${editor.isActive('bulletList') ? 'bg-gray-700 text-white' : 'text-gray-300'}`}
         title="Madde İşaretli Liste"
       >
         <FaListUl />
       </button>
+      
       <button
-        type="button"
         onClick={() => editor.chain().focus().toggleOrderedList().run()}
-        className={`p-2 rounded hover:bg-gray-100 ${editor.isActive('orderedList') ? 'bg-gray-200' : ''}`}
+        className={`p-2 rounded hover:bg-gray-700 ${editor.isActive('orderedList') ? 'bg-gray-700 text-white' : 'text-gray-300'}`}
         title="Numaralı Liste"
       >
         <FaListOl />
       </button>
+      
+      <div className="w-px h-6 mx-1 bg-gray-600"></div>
+      
       <button
-        type="button"
         onClick={setLink}
-        className={`p-2 rounded hover:bg-gray-100 ${editor.isActive('link') ? 'bg-gray-200' : ''}`}
+        className={`p-2 rounded hover:bg-gray-700 ${editor.isActive('link') ? 'bg-gray-700 text-white' : 'text-gray-300'}`}
         title="Bağlantı Ekle"
       >
         <FaLink />
       </button>
-      <div className="relative">
-        <button
-          type="button"
-          className={`p-2 rounded hover:bg-gray-100 ${uploading ? 'opacity-50' : ''}`}
-          title="Görsel Ekle"
+      
+      <label className={`p-2 rounded hover:bg-gray-700 cursor-pointer text-gray-300 ${uploading ? 'opacity-50 pointer-events-none' : ''}`} title="Görsel Ekle">
+        <FaImage />
+        <input 
+          type="file" 
+          className="hidden" 
+          accept="image/*"
+          onChange={(e) => {
+            const file = e.target.files?.[0]
+            if (file) {
+              uploadImage(file)
+            }
+          }}
           disabled={uploading}
-        >
-          <label className="cursor-pointer">
-            <FaImage />
-            <input 
-              type="file" 
-              className="hidden" 
-              accept="image/*" 
-              onChange={handleFileUpload}
-              disabled={uploading}
-            />
-          </label>
-        </button>
-        {uploading && (
-          <span className="absolute -top-1 -right-1 flex h-3 w-3">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-3 w-3 bg-primary"></span>
-          </span>
-        )}
-      </div>
+        />
+      </label>
+      
       <button
-        type="button"
         onClick={addYoutubeVideo}
-        className="p-2 rounded hover:bg-gray-100"
+        className="p-2 rounded hover:bg-gray-700 text-gray-300"
         title="YouTube Video Ekle"
       >
         <FaYoutube />
@@ -180,6 +194,9 @@ const MenuBar = ({ editor }: { editor: Editor | null }) => {
 }
 
 export default function RichTextEditor({ content, onChange }: EditorProps) {
+  // İçeriği parse et
+  const parsedContent = parseHtmlContent(content);
+  
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -221,23 +238,30 @@ export default function RichTextEditor({ content, onChange }: EditorProps) {
         placeholder: 'İçeriğinizi buraya yazın...',
       }),
     ],
-    content,
+    content: parsedContent,
     onUpdate: ({ editor }) => {
       onChange(editor.getHTML())
     },
     editorProps: {
       attributes: {
-        class: 'prose prose-lg max-w-none focus:outline-none blog-content',
+        class: 'prose prose-invert prose-lg max-w-none focus:outline-none blog-content',
       },
     },
   })
+  
+  // İçerik değiştiğinde editörü güncelle
+  useEffect(() => {
+    if (editor && content !== editor.getHTML()) {
+      editor.commands.setContent(parsedContent);
+    }
+  }, [content, editor]);
 
   return (
-    <div className="border border-gray-300 rounded-lg">
+    <div className="border border-gray-700 rounded-lg">
       <MenuBar editor={editor} />
       <EditorContent 
         editor={editor} 
-        className="prose max-w-none p-4 min-h-[400px] focus:outline-none blog-content"
+        className="prose prose-invert max-w-none p-4 min-h-[400px] focus:outline-none blog-content"
       />
     </div>
   )

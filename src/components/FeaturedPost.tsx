@@ -47,9 +47,9 @@ export default function FeaturedPost() {
               </div>
             )}
             <h1 className="text-4xl font-bold text-gray-100 mb-4">{post.title}</h1>
-            <p className="text-gray-400 mb-6">
-              {post.content.substring(0, 150)}...
-            </p>
+            <div className="text-gray-400 mb-6">
+              <div dangerouslySetInnerHTML={{ __html: post.content.substring(0, 150) + '...' }} />
+            </div>
             <div className="flex items-center space-x-4 mb-6">
               <div className="relative w-10 h-10 rounded-full overflow-hidden">
                 {settings?.admin_image ? (
@@ -145,9 +145,10 @@ export default function FeaturedPost() {
                   </span>
                 </div>
                 <div className="prose prose-invert max-w-none">
-                  <p className="text-gray-300 leading-relaxed whitespace-pre-wrap">
-                    {selectedPost.content}
-                  </p>
+                  <div 
+                    className="text-gray-300 leading-relaxed"
+                    dangerouslySetInnerHTML={{ __html: selectedPost.content }}
+                  />
                 </div>
               </div>
 

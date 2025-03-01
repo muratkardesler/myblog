@@ -5,6 +5,7 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import { PageProps } from '@/app/types'
+import HtmlContentServer from '@/components/HtmlContentServer'
 
 export const metadata: Metadata = {
   title: 'Blog Yazısı',
@@ -118,27 +119,28 @@ const styles = `
 
 // HTML içeriğini temizleyen yardımcı fonksiyon
 function cleanHtml(html: string): string {
-  return html
-    // HTML etiketlerini düzelt
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&amp;/g, '&')
-    .replace(/&quot;/g, '"')
-    // Resim etiketlerini düzelt - img etiketlerini responsive ve tam görünür yap
-    .replace(/<img(.*?)src="(.*?)"(.*?)>/g, '<img$1src="$2"$3 class="w-full h-auto my-6 rounded-lg" style="max-width: 100%; display: block; margin: 1.5rem auto;">')
-    // Bağlantıları düzelt
-    .replace(/<a href="(.*?)">/g, '<a href="$1" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:text-blue-800 underline">')
-    // Paragrafları düzelt
-    .replace(/<p>\s*<\/p>/g, '')
-    // Başlıkları düzelt
-    .replace(/<h1>(.*?)<\/h1>/g, '<h1 class="text-3xl font-bold mt-8 mb-4">$1</h1>')
-    .replace(/<h2>(.*?)<\/h2>/g, '<h2 class="text-2xl font-bold mt-6 mb-3">$1</h2>')
-    .replace(/<h3>(.*?)<\/h3>/g, '<h3 class="text-xl font-bold mt-5 mb-2">$1</h3>')
-    // Listeleri düzelt
-    .replace(/<ul>/g, '<ul class="list-disc pl-6 my-4">')
-    .replace(/<ol>/g, '<ol class="list-decimal pl-6 my-4">')
-    // YouTube iframe'lerini düzelt
-    .replace(/<iframe(.*?)src="(.*?)"(.*?)><\/iframe>/g, '<div class="aspect-w-16 aspect-h-9 my-6"><iframe$1src="$2"$3 class="w-full h-full rounded-lg"></iframe></div>');
+  if (!html) return '';
+  
+  // HTML etiketlerini düzgün şekilde parse et
+  let parsedContent = html;
+  
+  // Eğer içerik HTML etiketleri içeriyorsa ancak düz metin olarak görünüyorsa
+  if (
+    html.includes('&lt;') || 
+    html.includes('&gt;') || 
+    html.includes('&quot;') || 
+    html.includes('&#39;') || 
+    html.includes('&amp;')
+  ) {
+    parsedContent = html
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'")
+      .replace(/&amp;/g, '&');
+  }
+  
+  return parsedContent;
 }
 
 async function Page({ params }: PageProps) {
@@ -218,10 +220,7 @@ async function Page({ params }: PageProps) {
               </div>
             )}
 
-            <div 
-              className="prose lg:prose-lg max-w-none blog-content"
-              dangerouslySetInnerHTML={{ __html: cleanedContent }}
-            />
+            <HtmlContentServer content={cleanedContent} className="prose lg:prose-lg max-w-none blog-content" />
           </article>
         </div>
       </div>

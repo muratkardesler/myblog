@@ -59,9 +59,13 @@ export default function BlogPosts() {
                 <h2 className="text-xl font-semibold text-white mb-2 group-hover:text-purple-400 transition-colors">
                   {post.title}
                 </h2>
-                <p className="text-gray-400 text-sm mb-4 line-clamp-2">
-                  {post.content}
-                </p>
+                <div className="text-gray-400 text-sm mb-4 line-clamp-2">
+                  {post.excerpt ? (
+                    <div dangerouslySetInnerHTML={{ __html: post.excerpt }} />
+                  ) : (
+                    <div dangerouslySetInnerHTML={{ __html: post.content.substring(0, 120) + '...' }} />
+                  )}
+                </div>
                 <div className="flex items-center justify-between">
                   <div className="text-sm text-gray-500">
                     {calculateReadingTime(post.content)}
@@ -143,9 +147,10 @@ export default function BlogPosts() {
                   </span>
                 </div>
                 <div className="prose prose-invert max-w-none">
-                  <p className="text-gray-300 leading-relaxed whitespace-pre-wrap">
-                    {selectedPost.content}
-                  </p>
+                  <div 
+                    className="text-gray-300 leading-relaxed"
+                    dangerouslySetInnerHTML={{ __html: selectedPost.content }}
+                  />
                 </div>
               </div>
 

@@ -15,15 +15,15 @@ export async function getFeaturedPost(): Promise<Post | null> {
     `)
     .eq('status', 'published')
     .order('created_at', { ascending: false })
-    .limit(1)
-    .single();
+    .limit(1);
 
   if (error) {
     console.error('Error fetching featured post:', error);
     return null;
   }
 
-  return data;
+  // Eğer veri yoksa null döndür, varsa ilk öğeyi döndür
+  return data && data.length > 0 ? data[0] : null;
 }
 
 export async function getLatestPosts(limit: number = 4): Promise<Post[]> {

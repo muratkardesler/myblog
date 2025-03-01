@@ -55,6 +55,19 @@ export default function EditPostForm({ postId }: EditPostFormProps) {
         if (error) throw error
         if (!data) throw new Error('Post bulunamadı')
 
+        // HTML içeriğini düzgün şekilde işle
+        if (data.content && typeof data.content === 'string') {
+          // Eğer içerik HTML etiketleri içeriyorsa ancak düz metin olarak görünüyorsa
+          if (data.content.includes('&lt;') || data.content.includes('&gt;')) {
+            data.content = data.content
+              .replace(/&lt;/g, '<')
+              .replace(/&gt;/g, '>')
+              .replace(/&quot;/g, '"')
+              .replace(/&#39;/g, "'")
+              .replace(/&amp;/g, '&')
+          }
+        }
+
         setPost(data)
       } catch (error) {
         if (error instanceof Error) {

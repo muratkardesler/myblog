@@ -269,11 +269,9 @@ export default function NewPostPage() {
           </div>
 
           <div>
-            <div className="flex items-center justify-between mb-1">
-              <label htmlFor="content" className="block text-sm font-medium text-gray-300">
-                İçerik
-              </label>
-            </div>
+            <label className="block text-sm font-medium text-gray-300 mb-1">
+              İçerik
+            </label>
             <RichTextEditor
               content={formData.content}
               onChange={(content) => setFormData(prev => ({ ...prev, content }))}

@@ -52,7 +52,36 @@ export default function BlogPage() {
       const { data: postsData, error: postsError } = await query;
 
       if (postsError) throw postsError;
-      setPosts(postsData || []);
+      
+      // Verileri işle
+      const processedPosts = postsData?.map(post => {
+        // HTML içeriğini düzgün şekilde işle
+        if (post.content && typeof post.content === 'string') {
+          console.log('İşlenmemiş içerik:', post.content);
+          
+          // Eğer içerik HTML etiketleri içeriyorsa ancak düz metin olarak görünüyorsa
+          if (
+            post.content.includes('&lt;') || 
+            post.content.includes('&gt;') || 
+            post.content.includes('&quot;') || 
+            post.content.includes('&#39;') || 
+            post.content.includes('&amp;')
+          ) {
+            console.log('HTML karakterleri bulundu, dönüştürülüyor...');
+            post.content = post.content
+              .replace(/&lt;/g, '<')
+              .replace(/&gt;/g, '>')
+              .replace(/&quot;/g, '"')
+              .replace(/&#39;/g, "'")
+              .replace(/&amp;/g, '&');
+              
+            console.log('Dönüştürülmüş içerik:', post.content);
+          }
+        }
+        return post;
+      }) || [];
+      
+      setPosts(processedPosts);
     } catch (error) {
       console.error('Error loading blog data:', error);
     } finally {
@@ -98,9 +127,9 @@ export default function BlogPage() {
                           <h2 className="text-2xl font-bold text-white mb-3 group-hover:text-purple-400 transition-colors">
                             {post.title}
                           </h2>
-                          <p className="text-gray-300 text-base mb-6 line-clamp-2">
-                            {post.content}
-                          </p>
+                          <div className="text-gray-300 text-base mb-6 line-clamp-2 overflow-hidden">
+                            <div dangerouslySetInnerHTML={{ __html: post.content }} />
+                          </div>
                           <div className="flex items-center justify-between">
                             <div className="text-sm text-gray-400 flex items-center space-x-4">
                               <span className="flex items-center">
@@ -217,10 +246,13 @@ export default function BlogPage() {
                     {calculateReadingTime(selectedPost.content)}
                   </span>
                 </div>
-                <div className="prose prose-invert max-w-none">
-                  <p className="text-gray-300 leading-relaxed whitespace-pre-wrap">
-                    {selectedPost.content}
-                  </p>
+                <div className="text-gray-300 leading-relaxed">
+                  <div 
+                    className="prose prose-invert max-w-none"
+                    dangerouslySetInnerHTML={{ 
+                      __html: selectedPost.content 
+                    }}
+                  />
                 </div>
               </div>
 
