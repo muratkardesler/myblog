@@ -8,17 +8,20 @@ import Footer from '@/components/Footer';
 import Sidebar from '@/components/Sidebar';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { useParams } from 'next/navigation';
+import { parseHtmlContent, calculateReadingTime } from '@/lib/utils';
 
 export default function CategoryPage() {
   const params = useParams();
   const [posts, setPosts] = useState<PostWithCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [postLikes, setPostLikes] = useState<Record<string, number>>({});
   const supabase = createClientComponentClient();
 
   useEffect(() => {
     if (params.slug) {
       loadData();
+      loadPostLikes();
     }
   }, [params.slug]);
 
@@ -29,7 +32,7 @@ export default function CategoryPage() {
       setLoading(true);
 
       // Kategoriyi yükle
-      const { data: categoryData, error: categoryError } = await supabase
+      const { error: categoryError } = await supabase
         .from('categories')
         .select('*')
         .eq('slug', params.slug)
@@ -52,6 +55,36 @@ export default function CategoryPage() {
       setPosts([]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadPostLikes = async () => {
+    try {
+      // Post ID'lerine göre beğeni sayılarını al
+      const { data, error } = await supabase
+        .from('post_likes')
+        .select('post_id');
+
+      if (error) {
+        console.error('Beğeni sayılarını yükleme hatası:', error);
+        return;
+      }
+
+      // Her post için beğeni sayısını hesapla
+      const likesMap: Record<string, number> = {};
+      data.forEach(item => {
+        if (item.post_id) {
+          if (!likesMap[item.post_id]) {
+            likesMap[item.post_id] = 1;
+          } else {
+            likesMap[item.post_id]++;
+          }
+        }
+      });
+
+      setPostLikes(likesMap);
+    } catch (error) {
+      console.error('Beğeni sayılarını yükleme hatası:', error);
     }
   };
 
@@ -84,10 +117,10 @@ export default function CategoryPage() {
                       </span>
                     </div>
                     <div className="p-6">
-                      <h2 className="text-xl font-semibold text-gray-900 mb-2 hover:text-primary transition-colors">
+                      <h2 className="text-xl font-semibold text-white mb-2 hover:text-blue-400 transition-colors">
                         <a href={`/blog/${post.slug}`}>{post.title}</a>
                       </h2>
-                      <p className="text-gray-600 text-sm mb-4">{post.content.substring(0, 100)}...</p>
+                      <div className="text-gray-400 text-sm mb-4" dangerouslySetInnerHTML={{ __html: parseHtmlContent(post.content.substring(0, 150) + '...') }}></div>
                       <div className="flex items-center justify-between">
                         <div className="text-sm text-gray-500">
                           <span>{new Date(post.published_at).toLocaleDateString('tr-TR', {
@@ -96,14 +129,12 @@ export default function CategoryPage() {
                             day: 'numeric'
                           })}</span>
                           <span className="mx-2">•</span>
-                          <span>8 dk okuma</span>
+                          <span>{calculateReadingTime(post.content)}</span>
                         </div>
                         <div className="flex space-x-3">
                           <button className="like-btn w-8 h-8 flex items-center justify-center hover:bg-gray-700 rounded-full transition-colors">
                             <i className="ri-heart-line"></i>
-                          </button>
-                          <button className="bookmark-btn w-8 h-8 flex items-center justify-center hover:bg-gray-700 rounded-full transition-colors">
-                            <i className="ri-bookmark-line"></i>
+                            {postLikes[post.id] && <span className="ml-1 text-xs">{postLikes[post.id]}</span>}
                           </button>
                         </div>
                       </div>
