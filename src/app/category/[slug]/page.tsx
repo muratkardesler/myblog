@@ -10,6 +10,8 @@ import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { useParams } from 'next/navigation';
 import { parseHtmlContent, calculateReadingTime, formatDate } from '@/lib/utils';
 import Image from 'next/image';
+import { cookies } from 'next/headers';
+import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
 
 export default function CategoryPage() {
   const params = useParams();
@@ -368,4 +370,65 @@ const manualShare = (title: string, text: string, url: string) => {
       })
       .catch(err => console.error('Kopyalama hatası:', err));
   });
-}; 
+};
+
+// Kategori sayfası için metadata oluşturma fonksiyonu
+export async function generateMetadata({ params }: { params: { slug: string } }) {
+  try {
+    const cookieStore = cookies()
+    const supabase = createServerComponentClient({
+      cookies: () => cookieStore
+    })
+
+    // Kategori bilgilerini al
+    const { data: category, error } = await supabase
+      .from('categories')
+      .select('*')
+      .eq('slug', params.slug)
+      .single()
+
+    if (error || !category) {
+      return {
+        title: 'Kategori',
+        description: 'Kategori bulunamadı',
+      }
+    }
+
+    return {
+      title: `${category.name} Yazıları - Murat Kardeşler Blog`,
+      description: `${category.name} kategorisindeki tüm yazılar. Murat Kardeşler Blog.`,
+      openGraph: {
+        title: `${category.name} Yazıları - Murat Kardeşler Blog`,
+        description: `${category.name} kategorisindeki tüm yazılar. Murat Kardeşler Blog.`,
+        url: `https://muratkardesler.com/category/${category.slug}`,
+        siteName: 'Murat Kardeşler Blog',
+        images: [
+          {
+            url: 'https://muratkardesler.com/images/og-image.jpg',
+            width: 1200,
+            height: 630,
+            alt: `${category.name} Kategorisi`,
+          },
+        ],
+        locale: 'tr_TR',
+        type: 'website',
+      },
+      twitter: {
+        card: 'summary_large_image',
+        title: `${category.name} Yazıları - Murat Kardeşler Blog`,
+        description: `${category.name} kategorisindeki tüm yazılar. Murat Kardeşler Blog.`,
+        images: ['https://muratkardesler.com/images/og-image.jpg'],
+      },
+      alternates: {
+        canonical: `https://muratkardesler.com/category/${category.slug}`,
+      },
+      keywords: [category.name, 'blog', 'Murat Kardeşler', 'yazılım', 'teknoloji'],
+    }
+  } catch (error) {
+    console.error('Error generating metadata:', error)
+    return {
+      title: 'Kategori',
+      description: 'Murat Kardeşler Blog',
+    }
+  }
+} 
