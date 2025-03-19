@@ -33,14 +33,38 @@ export default function LoginPage() {
 
   useEffect(() => {
     // Kullanıcı zaten giriş yapmışsa anasayfaya yönlendir
+    let isMounted = true;
+    let timeoutId: NodeJS.Timeout;
+    
     const checkAuth = async () => {
-      const { data } = await supabase.auth.getSession();
-      if (data.session) {
-        router.push('/');
+      try {
+        // Rate limit sorunlarını engellemek için localStorage kontrolü
+        const localSession = localStorage.getItem('supabase.auth.token');
+        
+        // Eğer localStorage'da oturum bilgisi varsa, direkt yönlendir
+        if (localSession) {
+          router.push('/');
+          return;
+        }
+        
+        // Yoksa Supabase'e sorgu at
+        const { data } = await supabase.auth.getSession();
+        if (data.session && isMounted) {
+          timeoutId = setTimeout(() => {
+            router.push('/');
+          }, 100);
+        }
+      } catch (error) {
+        console.error('Oturum kontrolü hatası:', error);
       }
     };
     
     checkAuth();
+    
+    return () => {
+      isMounted = false;
+      if (timeoutId) clearTimeout(timeoutId);
+    };
   }, [router, supabase.auth]);
 
   const validateForm = () => {
@@ -83,29 +107,35 @@ export default function LoginPage() {
       const result = await loginUser(formData.email, formData.password);
       
       if (!result.success) {
-        if (result.error && 'message' in (result.error as any)) {
-          const errorMessage = (result.error as any).message;
+        if (result.error && typeof result.error === 'object' && 'message' in result.error) {
+          const errorMessage = result.error.message as string;
           
-          if (errorMessage.includes('Invalid login credentials')) {
+          if (errorMessage.includes('E-posta adresi veya şifre hatalı')) {
             setErrors({
               email: 'E-posta adresi veya şifre hatalı',
               password: 'E-posta adresi veya şifre hatalı'
             });
           } else {
-            toast.error('Giriş işlemi sırasında bir hata oluştu.');
+            toast.error(errorMessage || 'Giriş işlemi sırasında bir hata oluştu.');
           }
         } else {
           toast.error('Giriş işlemi sırasında bir hata oluştu.');
         }
+        setLoading(false);
         return;
       }
       
-      toast.success('Giriş başarılı!');
-      router.push('/');
+      // Başarılı giriş animasyonu ve mesajı
+      toast.success('Giriş başarılı! Yönlendiriliyorsunuz...');
+
+      // Giriş başarılı mesajını görmeleri için kısa bir gecikme
+      setTimeout(() => {
+        router.push('/');
+      }, 1500);
+      
     } catch (error) {
       console.error('Login error:', error);
       toast.error('Beklenmeyen bir hata oluştu.');
-    } finally {
       setLoading(false);
     }
   };

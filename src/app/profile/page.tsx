@@ -188,7 +188,35 @@ export default function ProfilePage() {
             </button>
           </div>
           
+          {/* Üyelere Özel Duyuru */}
+          <div className="bg-purple-500/10 border border-purple-500/20 rounded-2xl p-6 mb-6">
+            <div className="flex items-start">
+              <div className="shrink-0 bg-purple-500/20 w-12 h-12 flex items-center justify-center rounded-xl mr-4">
+                <i className="ri-vip-crown-fill text-2xl text-purple-400"></i>
+              </div>
+              <div>
+                <h3 className="text-xl font-semibold text-white mb-2">Üyelere Özel İçerikler</h3>
+                <p className="text-gray-300">
+                  Çok yakında blog üyelerine özel içerikler, kaynaklar ve indirimler sunacağız. 
+                  Üyeliğiniz ile ilgili güncellemeler için bu sayfayı takip etmeye devam edin.
+                </p>
+                <div className="mt-4 flex flex-wrap gap-3">
+                  <div className="bg-purple-500/10 rounded-lg px-3 py-1 text-sm text-purple-300 flex items-center">
+                    <i className="ri-book-mark-line mr-1"></i> Özel blog yazıları
+                  </div>
+                  <div className="bg-purple-500/10 rounded-lg px-3 py-1 text-sm text-purple-300 flex items-center">
+                    <i className="ri-download-line mr-1"></i> İndirilebilir kaynaklar
+                  </div>
+                  <div className="bg-purple-500/10 rounded-lg px-3 py-1 text-sm text-purple-300 flex items-center">
+                    <i className="ri-gift-line mr-1"></i> Özel indirimler
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
           <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-2xl p-8">
+            <h2 className="text-xl font-bold text-white mb-6">Profil Bilgilerim</h2>
             <form onSubmit={handleSubmit} className="space-y-6">
               <AuthInput
                 type="text"

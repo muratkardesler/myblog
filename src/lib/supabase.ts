@@ -4,7 +4,47 @@ import { Post, Category, PostLike, User } from './types';
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// Tarayıcı ortamını kontrol et
+const isBrowser = typeof window !== 'undefined';
+
+// Supabase istemcisini tek bir instance olarak oluştur
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: false, // URL'de oturum bilgisi arama, bunun yerine localStorage kullan
+    storageKey: 'supabase.auth.token',
+  },
+  global: {
+    headers: {
+      'x-client-info': `my-blog-app/${isBrowser ? navigator.userAgent : 'server'}`,
+    },
+    fetch: (...args) => {
+      // Rate limit sorunlarını önlemek için özel fetch ayarları
+      const fetchWithTimeout = async (resource: RequestInfo, options?: RequestInit) => {
+        const controller = new AbortController();
+        const id = setTimeout(() => controller.abort(), 10000); // 10 saniye timeout
+        
+        try {
+          const response = await fetch(resource, {
+            ...options,
+            signal: controller.signal,
+          });
+          clearTimeout(id);
+          return response;
+        } catch (error) {
+          clearTimeout(id);
+          throw error;
+        }
+      };
+      
+      return fetchWithTimeout(args[0], args[1]);
+    }
+  }
+});
+
+// Yardımcı fonksiyon - Aritmetik gecikme ile yeniden deneme
+export const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 // Auth fonksiyonları
 export async function registerUser(email: string, password: string, full_name: string) {
@@ -99,29 +139,96 @@ export async function registerUser(email: string, password: string, full_name: s
 }
 
 export async function loginUser(email: string, password: string) {
-  try {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+  const maxRetries = 3;
+  let retryCount = 0;
+  let backoffTime = 1000; // 1 saniye
+  
+  // Retry işlemi ile giriş yap
+  while(retryCount < maxRetries) {
+    try {
+      // Her denemede önceki oturumları temizle
+      if (retryCount > 0) {
+        await supabase.auth.signOut();
+        console.log(`Giriş yeniden deneniyor (${retryCount}/${maxRetries})...`);
+        await new Promise(resolve => setTimeout(resolve, backoffTime));
+      }
+      
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
-    if (error) throw error;
+      if (error) {
+        // Rate limit hatası
+        if (error.status === 429) {
+          retryCount++;
+          backoffTime *= 2; // Her denemede bekleme süresini ikiye katla
+          console.warn(`Rate limit hatası, ${backoffTime/1000} saniye bekleyip tekrar deneniyor...`);
+          continue; // Döngüyü devam ettir
+        }
+        
+        // Kimlik bilgileri hatası
+        if (error.message?.includes('Invalid login credentials')) {
+          return { 
+            success: false, 
+            error: { 
+              message: 'E-posta adresi veya şifre hatalı. Lütfen bilgilerinizi kontrol edin.' 
+            } 
+          };
+        }
+        
+        // Diğer hatalar
+        return { 
+          success: false, 
+          error: { 
+            message: `Giriş hatası: ${error.message}` 
+          } 
+        };
+      }
 
-    // Son giriş zamanını güncelle
-    if (data?.user) {
-      await supabase
-        .from('users')
-        .update({
-          last_login: new Date().toISOString(),
-        })
-        .eq('id', data.user.id);
+      // Başarılı giriş - son giriş zamanını güncelle
+      if (data?.user) {
+        await supabase
+          .from('users')
+          .update({
+            last_login: new Date().toISOString(),
+          })
+          .eq('id', data.user.id)
+          .then(result => {
+            if (result.error) {
+              console.warn('Son giriş zamanı güncellenemedi:', result.error);
+            }
+          });
+      }
+
+      return { success: true, user: data?.user || null };
+    } catch (error: any) {
+      retryCount++;
+      
+      if (retryCount >= maxRetries) {
+        console.error('Maksimum deneme sayısına ulaşıldı:', error);
+        return { 
+          success: false, 
+          error: { 
+            message: 'Giriş yapılamadı. Lütfen daha sonra tekrar deneyin.' 
+          } 
+        };
+      }
+      
+      // Hata türüne göre bekleme süresi ayarla
+      backoffTime *= 2;
+      console.warn(`Hata oluştu, ${backoffTime/1000} saniye bekleyip tekrar deneniyor...`, error);
+      await new Promise(resolve => setTimeout(resolve, backoffTime));
     }
-
-    return { success: true, user: data?.user || null };
-  } catch (error) {
-    console.error('Giriş hatası:', error);
-    return { success: false, error };
   }
+  
+  // Bu noktaya asla ulaşılmamalı, ama TypeScript için gerekli
+  return { 
+    success: false, 
+    error: { 
+      message: 'Beklenmeyen bir hata oluştu. Lütfen daha sonra tekrar deneyin.' 
+    } 
+  };
 }
 
 export async function logoutUser() {
