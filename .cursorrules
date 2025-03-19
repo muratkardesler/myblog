@@ -93,3 +93,12 @@ tabloyu güncel tuttuktan sonra supabase yazılacak kodu bana ver cli ile yapıl
 - ip_address (text)
 - user_agent (text)
 - created_at (timestamp)
+
+/* users tablosu */
+- id (uuid) - auth.users tablosundan CASCADE referans
+- email (text) - UNIQUE
+- full_name (text)
+- created_at (timestamp)
+- updated_at (timestamp)
+- last_login (timestamp)
+- is_active (boolean)

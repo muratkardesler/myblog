@@ -9,6 +9,7 @@ interface Stats {
   categories: number;
   contacts: number;
   subscribers: number;
+  userCount: number;
 }
 
 interface VisitStats {
@@ -24,7 +25,8 @@ export default function AdminDashboard() {
     posts: 0,
     categories: 0,
     contacts: 0,
-    subscribers: 0
+    subscribers: 0,
+    userCount: 0
   })
   const [visitStats, setVisitStats] = useState<VisitStats>({
     daily: 0,
@@ -63,11 +65,17 @@ export default function AdminDashboard() {
       .from('contacts')
       .select('*', { count: 'exact', head: true })
 
+    // User count
+    const { count: userCount } = await supabase
+      .from('users')
+      .select('*', { count: 'exact', head: true })
+
     setStats({
       posts: postsCount || 0,
       categories: categoriesCount || 0,
       contacts: contactsCount || 0,
-      subscribers: 0
+      subscribers: 0,
+      userCount: userCount || 0
     })
   }
 
@@ -130,46 +138,165 @@ export default function AdminDashboard() {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold text-gray-100 mb-8">Admin Paneli</h1>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <Link href="/admin/posts" className="bg-purple-500 rounded-xl p-6 hover:bg-purple-600 transition-colors">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-4xl font-bold text-white">{stats.posts}</p>
-              <h2 className="text-lg text-purple-100">Yazılar</h2>
-            </div>
-            <i className="ri-article-line text-3xl text-purple-200"></i>
-          </div>
-        </Link>
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-gray-100">Admin Paneli</h1>
+        <p className="text-gray-400 mt-2">Sitenizi bu panel üzerinden yönetin</p>
+      </div>
 
-        <Link href="/admin/categories" className="bg-blue-500 rounded-xl p-6 hover:bg-blue-600 transition-colors">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-4xl font-bold text-white">{stats.categories}</p>
-              <h2 className="text-lg text-blue-100">Kategoriler</h2>
+      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {/* Yazılar */}
+        <div className="bg-gray-800 border border-gray-700 rounded-xl p-6 hover:shadow-lg hover:shadow-primary/10 hover:border-primary/50 transition-all duration-300">
+          <div className="flex items-center justify-between mb-6">
+            <div className="p-3 rounded-lg bg-indigo-500/10">
+              <i className="ri-article-line text-2xl text-indigo-400"></i>
             </div>
-            <i className="ri-price-tag-3-line text-3xl text-blue-200"></i>
+            <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-indigo-500/10 text-indigo-400">
+              {stats.posts} yazı
+            </span>
           </div>
-        </Link>
-
-        <Link href="/admin/contacts" className="bg-green-500 rounded-xl p-6 hover:bg-green-600 transition-colors">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-4xl font-bold text-white">{stats.contacts}</p>
-              <h2 className="text-lg text-green-100">Gelen Mesajlar</h2>
-            </div>
-            <i className="ri-chat-3-line text-3xl text-green-200"></i>
+          <h3 className="text-lg font-semibold text-white mb-2">Yazılar</h3>
+          <p className="text-gray-400 text-sm mb-4">
+            Blog yazılarını ekleyin, düzenleyin ve yönetin
+          </p>
+          <div className="flex items-center space-x-3">
+            <Link
+              href="/admin/posts"
+              className="flex items-center flex-1 justify-center px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-gray-300 transition-colors"
+            >
+              <i className="ri-list-check mr-1.5"></i>
+              Yazıları Listele
+            </Link>
+            <Link
+              href="/admin/posts/new"
+              className="flex items-center px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-gray-300 transition-colors"
+            >
+              <i className="ri-add-line"></i>
+            </Link>
           </div>
-        </Link>
+        </div>
 
-        <div className="bg-red-500 rounded-xl p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-4xl font-bold text-white">{stats.subscribers}</p>
-              <h2 className="text-lg text-red-100">Aboneler</h2>
+        {/* Kategoriler */}
+        <div className="bg-gray-800 border border-gray-700 rounded-xl p-6 hover:shadow-lg hover:shadow-primary/10 hover:border-primary/50 transition-all duration-300">
+          <div className="flex items-center justify-between mb-6">
+            <div className="p-3 rounded-lg bg-green-500/10">
+              <i className="ri-price-tag-3-line text-2xl text-green-400"></i>
             </div>
-            <i className="ri-user-follow-line text-3xl text-red-200"></i>
+            <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-green-500/10 text-green-400">
+              {stats.categories} kategori
+            </span>
+          </div>
+          <h3 className="text-lg font-semibold text-white mb-2">Kategoriler</h3>
+          <p className="text-gray-400 text-sm mb-4">
+            Yazılarınız için kategoriler oluşturun ve düzenleyin
+          </p>
+          <div className="flex items-center space-x-3">
+            <Link
+              href="/admin/categories"
+              className="flex items-center flex-1 justify-center px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-gray-300 transition-colors"
+            >
+              <i className="ri-list-check mr-1.5"></i>
+              Kategorileri Listele
+            </Link>
+            <Link
+              href="/admin/categories/new"
+              className="flex items-center px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-gray-300 transition-colors"
+            >
+              <i className="ri-add-line"></i>
+            </Link>
+          </div>
+        </div>
+
+        {/* Üyeler */}
+        <div className="bg-gray-800 border border-gray-700 rounded-xl p-6 hover:shadow-lg hover:shadow-primary/10 hover:border-primary/50 transition-all duration-300">
+          <div className="flex items-center justify-between mb-6">
+            <div className="p-3 rounded-lg bg-blue-500/10">
+              <i className="ri-user-line text-2xl text-blue-400"></i>
+            </div>
+            <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-blue-500/10 text-blue-400">
+              {stats.userCount} üye
+            </span>
+          </div>
+          <h3 className="text-lg font-semibold text-white mb-2">Üyeler</h3>
+          <p className="text-gray-400 text-sm mb-4">
+            Siteye kayıtlı üyeleri görüntüleyin ve yönetin
+          </p>
+          <div className="flex items-center">
+            <Link
+              href="/admin/users"
+              className="flex items-center flex-1 justify-center px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-gray-300 transition-colors"
+            >
+              <i className="ri-list-check mr-1.5"></i>
+              Üyeleri Listele
+            </Link>
+          </div>
+        </div>
+
+        {/* İletişim */}
+        <div className="bg-gray-800 border border-gray-700 rounded-xl p-6 hover:shadow-lg hover:shadow-primary/10 hover:border-primary/50 transition-all duration-300">
+          <div className="flex items-center justify-between mb-6">
+            <div className="p-3 rounded-lg bg-yellow-500/10">
+              <i className="ri-mail-line text-2xl text-yellow-400"></i>
+            </div>
+            <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-yellow-500/10 text-yellow-400">
+              {stats.contacts} mesaj
+            </span>
+          </div>
+          <h3 className="text-lg font-semibold text-white mb-2">İletişim</h3>
+          <p className="text-gray-400 text-sm mb-4">
+            Size gönderilen mesajları görüntüleyin
+          </p>
+          <div className="flex items-center">
+            <Link
+              href="/admin/contacts"
+              className="flex items-center flex-1 justify-center px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-gray-300 transition-colors"
+            >
+              <i className="ri-mail-open-line mr-1.5"></i>
+              Mesajları Görüntüle
+            </Link>
+          </div>
+        </div>
+
+        {/* Ayarlar */}
+        <div className="bg-gray-800 border border-gray-700 rounded-xl p-6 hover:shadow-lg hover:shadow-primary/10 hover:border-primary/50 transition-all duration-300">
+          <div className="flex items-center justify-between mb-6">
+            <div className="p-3 rounded-lg bg-purple-500/10">
+              <i className="ri-settings-3-line text-2xl text-purple-400"></i>
+            </div>
+          </div>
+          <h3 className="text-lg font-semibold text-white mb-2">Ayarlar</h3>
+          <p className="text-gray-400 text-sm mb-4">
+            Sitenin genel ayarlarını düzenleyin
+          </p>
+          <div className="flex items-center">
+            <Link
+              href="/admin/settings"
+              className="flex items-center flex-1 justify-center px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-gray-300 transition-colors"
+            >
+              <i className="ri-settings-4-line mr-1.5"></i>
+              Ayarları Düzenle
+            </Link>
+          </div>
+        </div>
+
+        {/* Hakkımda */}
+        <div className="bg-gray-800 border border-gray-700 rounded-xl p-6 hover:shadow-lg hover:shadow-primary/10 hover:border-primary/50 transition-all duration-300">
+          <div className="flex items-center justify-between mb-6">
+            <div className="p-3 rounded-lg bg-red-500/10">
+              <i className="ri-information-line text-2xl text-red-400"></i>
+            </div>
+          </div>
+          <h3 className="text-lg font-semibold text-white mb-2">Hakkımda</h3>
+          <p className="text-gray-400 text-sm mb-4">
+            Hakkında sayfasında görüntülenecek bilgileri düzenleyin
+          </p>
+          <div className="flex items-center">
+            <Link
+              href="/admin/about"
+              className="flex items-center flex-1 justify-center px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-gray-300 transition-colors"
+            >
+              <i className="ri-edit-line mr-1.5"></i>
+              İçeriği Düzenle
+            </Link>
           </div>
         </div>
       </div>

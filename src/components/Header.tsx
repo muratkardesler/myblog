@@ -1,4 +1,7 @@
 import Link from 'next/link';
+import { useState, useEffect } from 'react';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { getCurrentUser } from '@/lib/supabase';
 
 interface HeaderProps {
   mobileMenuOpen: boolean;
@@ -6,6 +9,43 @@ interface HeaderProps {
 }
 
 export default function Header({ mobileMenuOpen, setMobileMenuOpen }: HeaderProps) {
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [userName, setUserName] = useState('');
+  const supabase = createClientComponentClient();
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data } = await supabase.auth.getSession();
+      setIsLoggedIn(!!data.session);
+      
+      if (data.session) {
+        const userInfo = await getCurrentUser();
+        if (userInfo.success && userInfo.profile) {
+          setUserName(userInfo.profile.full_name || '');
+        }
+      }
+    };
+    
+    checkAuth();
+    
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+      setIsLoggedIn(!!session);
+      
+      if (session) {
+        const userInfo = await getCurrentUser();
+        if (userInfo.success && userInfo.profile) {
+          setUserName(userInfo.profile.full_name || '');
+        }
+      } else {
+        setUserName('');
+      }
+    });
+    
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
+  }, [supabase.auth]);
+
   return (
     <>
       <header className="fixed top-0 left-0 right-0 bg-gray-900/80 backdrop-blur-md z-50 border-b border-gray-800">
@@ -25,6 +65,40 @@ export default function Header({ mobileMenuOpen, setMobileMenuOpen }: HeaderProp
               <Link href="/blog" className="text-gray-300 hover:text-primary transition-colors">Blog</Link>
               <Link href="/contact" className="text-gray-300 hover:text-primary transition-colors">İletişim</Link>
             </nav>
+            
+            <div className="hidden md:flex items-center space-x-4">
+              {isLoggedIn ? (
+                <div className="flex items-center space-x-3">
+                  <div className="text-gray-300">
+                    <span className="text-purple-400 font-medium">Hoş geldiniz, </span> 
+                    {userName}
+                  </div>
+                  <Link 
+                    href="/profile" 
+                    className="bg-purple-500/10 text-purple-400 border border-purple-500/20 px-4 py-1.5 rounded-xl hover:bg-purple-500/20 transition-colors"
+                  >
+                    <i className="ri-user-line mr-2"></i>
+                    Profilim
+                  </Link>
+                </div>
+              ) : (
+                <>
+                  <Link 
+                    href="/auth/login" 
+                    className="text-gray-300 hover:text-white transition-colors"
+                  >
+                    Giriş
+                  </Link>
+                  <Link 
+                    href="/auth/register" 
+                    className="bg-purple-500/10 text-purple-400 border border-purple-500/20 px-4 py-1.5 rounded-xl hover:bg-purple-500/20 transition-colors"
+                  >
+                    Üye Ol
+                  </Link>
+                </>
+              )}
+            </div>
+            
             <button 
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               className="md:hidden w-10 h-10 flex items-center justify-center"
@@ -40,6 +114,37 @@ export default function Header({ mobileMenuOpen, setMobileMenuOpen }: HeaderProp
           <Link href="/about" className="text-gray-300 hover:text-primary transition-colors py-2">Hakkımda</Link>
           <Link href="/blog" className="text-gray-300 hover:text-primary transition-colors py-2">Blog</Link>
           <Link href="/contact" className="text-gray-300 hover:text-primary transition-colors py-2">İletişim</Link>
+          
+          {isLoggedIn ? (
+            <>
+              <div className="text-gray-300 py-2">
+                <span className="text-purple-400 font-medium">Hoş geldiniz, </span> 
+                {userName}
+              </div>
+              <Link 
+                href="/profile" 
+                className="text-purple-400 hover:text-primary transition-colors py-2"
+              >
+                <i className="ri-user-line mr-2"></i>
+                Profilim
+              </Link>
+            </>
+          ) : (
+            <>
+              <Link 
+                href="/auth/login" 
+                className="text-gray-300 hover:text-primary transition-colors py-2"
+              >
+                Giriş
+              </Link>
+              <Link 
+                href="/auth/register" 
+                className="text-purple-400 hover:text-primary transition-colors py-2"
+              >
+                Üye Ol
+              </Link>
+            </>
+          )}
         </nav>
       </div>
     </>

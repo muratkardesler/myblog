@@ -1,10 +1,186 @@
 import { createClient } from '@supabase/supabase-js';
-import { Post, Category, PostLike } from './types';
+import { Post, Category, PostLike, User } from './types';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+// Auth fonksiyonları
+export async function registerUser(email: string, password: string, full_name: string) {
+  try {
+    // Önce e-posta adresinin zaten kullanımda olup olmadığını kontrol et
+    const { data: userExists, error: userExistsError } = await supabase
+      .from('users')
+      .select('id')
+      .eq('email', email)
+      .maybeSingle();
+    
+    if (userExists) {
+      return { 
+        success: false, 
+        error: { 
+          message: 'Bu e-posta adresi zaten kayıtlı. Lütfen giriş yapmayı deneyin veya doğrulama e-postanızı kontrol edin.' 
+        } 
+      };
+    }
+    
+    // Kullanıcı kaydı
+    const { data: authData, error: authError } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        emailRedirectTo: `${window.location.origin}/auth/login`,
+        data: {
+          full_name
+        }
+      }
+    });
+
+    if (authError) {
+      console.error('Auth kaydı hatası:', authError);
+      
+      // Duplicate e-posta kontrolü
+      if (authError.message?.includes('email') || 
+          authError.message?.includes('already') || 
+          authError.message?.includes('registered')) {
+        return { 
+          success: false, 
+          error: { 
+            message: 'Bu e-posta adresi zaten kayıtlı. Lütfen giriş yapmayı deneyin veya doğrulama e-postanızı kontrol edin.' 
+          } 
+        };
+      }
+      
+      throw authError;
+    }
+
+    console.log('Auth data:', authData);
+
+    if (authData?.user) {
+      // Profile bilgilerinin kaydı
+      const { error: profileError } = await supabase
+        .from('users')
+        .insert({
+          id: authData.user.id,
+          email,
+          full_name,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        });
+
+      if (profileError) {
+        console.error('Profile oluşturma hatası:', profileError);
+        
+        // Duplicate e-posta kontrolü
+        if (profileError.code === '23505') {
+          return { 
+            success: false, 
+            error: { 
+              message: 'Bu e-posta adresi zaten kayıtlı. Lütfen giriş yapmayı deneyin veya doğrulama e-postanızı kontrol edin.',
+              code: '23505'
+            } 
+          };
+        }
+        
+        throw profileError;
+      }
+    }
+
+    return { 
+      success: true, 
+      user: authData?.user || null, 
+      message: 'Kayıt başarılı! Lütfen e-posta adresinizi kontrol edin ve hesabınızı doğrulayın.' 
+    };
+  } catch (error) {
+    console.error('Kullanıcı kaydı hatası:', error);
+    return { success: false, error };
+  }
+}
+
+export async function loginUser(email: string, password: string) {
+  try {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (error) throw error;
+
+    // Son giriş zamanını güncelle
+    if (data?.user) {
+      await supabase
+        .from('users')
+        .update({
+          last_login: new Date().toISOString(),
+        })
+        .eq('id', data.user.id);
+    }
+
+    return { success: true, user: data?.user || null };
+  } catch (error) {
+    console.error('Giriş hatası:', error);
+    return { success: false, error };
+  }
+}
+
+export async function logoutUser() {
+  try {
+    const { error } = await supabase.auth.signOut();
+    if (error) throw error;
+    return { success: true };
+  } catch (error) {
+    console.error('Çıkış hatası:', error);
+    return { success: false, error };
+  }
+}
+
+export async function resetPassword(email: string) {
+  try {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+    
+    if (error) throw error;
+    return { success: true };
+  } catch (error) {
+    console.error('Şifre sıfırlama hatası:', error);
+    return { success: false, error };
+  }
+}
+
+export async function updatePassword(newPassword: string) {
+  try {
+    const { error } = await supabase.auth.updateUser({
+      password: newPassword,
+    });
+    
+    if (error) throw error;
+    return { success: true };
+  } catch (error) {
+    console.error('Şifre güncelleme hatası:', error);
+    return { success: false, error };
+  }
+}
+
+export async function getUsers(): Promise<User[]> {
+  try {
+    const { data, error } = await supabase
+      .from('users')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Kullanıcıları getirme hatası:', error);
+      return [];
+    }
+
+    return data || [];
+  } catch (error) {
+    console.error('Kullanıcıları getirme hatası:', error);
+    return [];
+  }
+}
 
 export async function getFeaturedPost(): Promise<Post | null> {
   const { data, error } = await supabase
@@ -329,5 +505,41 @@ export async function likePost(postId: string, ipAddress: string, userAgent: str
     }
     
     return true; // Beğeni eklendi
+  }
+}
+
+export async function getCurrentUser() {
+  try {
+    const { data: { session }, error } = await supabase.auth.getSession();
+    
+    if (error) {
+      console.error('Oturum kontrol hatası:', error);
+      return { success: false, user: null, error };
+    }
+    
+    if (!session) {
+      return { success: false, user: null };
+    }
+    
+    // Kullanıcı profil bilgilerini al
+    const { data: profile, error: profileError } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', session.user.id)
+      .single();
+    
+    if (profileError) {
+      console.error('Profil bilgisi alma hatası:', profileError);
+      return { success: true, user: session.user, profile: null };
+    }
+    
+    return { 
+      success: true, 
+      user: session.user,
+      profile
+    };
+  } catch (error) {
+    console.error('Kullanıcı bilgisi alma hatası:', error);
+    return { success: false, user: null, error };
   }
 } 
