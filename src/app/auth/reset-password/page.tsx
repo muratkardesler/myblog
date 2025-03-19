@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import Link from 'next/link';
@@ -25,7 +25,8 @@ interface FormErrors {
   password_confirm?: string;
 }
 
-export default function ResetPasswordPage() {
+// SearchParams içeren bileşen
+function ResetPasswordContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const supabase = createClientComponentClient();
@@ -269,7 +270,7 @@ export default function ResetPasswordPage() {
                     {loading ? (
                       <span className="flex items-center justify-center">
                         <i className="ri-loader-4-line animate-spin mr-2"></i>
-                        İşleniyor...
+                        Link gönderiliyor...
                       </span>
                     ) : (
                       'Sıfırlama Linki Gönder'
@@ -279,8 +280,9 @@ export default function ResetPasswordPage() {
                 
                 <div className="mt-6 text-center text-sm">
                   <p className="text-gray-400">
+                    Şifrenizi hatırladınız mı?{' '}
                     <Link href="/auth/login" className="text-purple-400 hover:text-purple-300 transition-colors">
-                      Giriş sayfasına dön
+                      Giriş Yap
                     </Link>
                   </p>
                 </div>
@@ -291,5 +293,23 @@ export default function ResetPasswordPage() {
       </main>
       <Footer />
     </>
+  );
+}
+
+// Ana bileşen
+export default function ResetPasswordPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 mx-auto mb-4 flex items-center justify-center">
+            <i className="ri-loader-4-line animate-spin text-4xl text-purple-500"></i>
+          </div>
+          <p className="text-gray-300">Yükleniyor...</p>
+        </div>
+      </div>
+    }>
+      <ResetPasswordContent />
+    </Suspense>
   );
 } 
