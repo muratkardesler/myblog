@@ -55,7 +55,7 @@ export default function BlogPostClient({ post }: BlogPostClientProps) {
       const response = await fetch('/api/visitor-info');
       const { ip, userAgent } = await response.json();
       
-      const liked = await likePost(post.id, ip, userAgent);
+      const liked = await likePost(post.id, ip);
       
       setIsLiked(liked);
       

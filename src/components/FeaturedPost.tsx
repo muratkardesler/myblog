@@ -58,7 +58,7 @@ export default function FeaturedPost() {
       const response = await fetch('/api/visitor-info');
       const { ip, userAgent } = await response.json();
       
-      const liked = await likePost(post.id, ip, userAgent);
+      const liked = await likePost(post.id, ip);
       setIsLiked(liked);
       
       // Beğeni sayısını güncelle

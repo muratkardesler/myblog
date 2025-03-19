@@ -75,7 +75,7 @@ export default function CategoryPageClient({ initialCategory, initialPosts, slug
       const response = await fetch('/api/visitor-info');
       const { ip, userAgent } = await response.json();
       
-      const liked = await likePost(postId, ip, userAgent);
+      const liked = await likePost(postId, ip);
       
       setLikedPosts(prev => ({
         ...prev,

@@ -21,7 +21,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     },
     fetch: (...args) => {
       // Rate limit sorunlarını önlemek için özel fetch ayarları
-      const fetchWithTimeout = async (resource: RequestInfo, options?: RequestInit) => {
+      const fetchWithTimeout = async (resource: RequestInfo | URL, options?: RequestInit) => {
         const controller = new AbortController();
         const id = setTimeout(() => controller.abort(), 10000); // 10 saniye timeout
         
@@ -38,7 +38,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
         }
       };
       
-      return fetchWithTimeout(args[0], args[1]);
+      return fetchWithTimeout(args[0] as RequestInfo, args[1]);
     }
   }
 });
@@ -50,7 +50,7 @@ export const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, 
 export async function registerUser(email: string, password: string, full_name: string) {
   try {
     // Önce e-posta adresinin zaten kullanımda olup olmadığını kontrol et
-    const { data: userExists, error: userExistsError } = await supabase
+    const { data: userExists } = await supabase
       .from('users')
       .select('id')
       .eq('email', email)
@@ -65,12 +65,21 @@ export async function registerUser(email: string, password: string, full_name: s
       };
     }
     
+    // Site URL'sini al
+    let siteUrl = "";
+    if (typeof window !== 'undefined') {
+      // Tarayıcı ortamında doğru host ve protokolü kullan
+      const host = window.location.host; // 'localhost:3000' veya 'muratkardesler.com'
+      const protocol = window.location.protocol; // 'http:' veya 'https:'
+      siteUrl = `${protocol}//${host}`;
+    }
+    
     // Kullanıcı kaydı
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        emailRedirectTo: `${window.location.origin}/auth/login`,
+        emailRedirectTo: `${siteUrl}/auth/login`,
         data: {
           full_name
         }
@@ -202,7 +211,7 @@ export async function loginUser(email: string, password: string) {
       }
 
       return { success: true, user: data?.user || null };
-    } catch (error: any) {
+    } catch (error: unknown) {
       retryCount++;
       
       if (retryCount >= maxRetries) {
@@ -244,8 +253,17 @@ export async function logoutUser() {
 
 export async function resetPassword(email: string) {
   try {
+    // Site URL'sini al
+    let siteUrl = "";
+    if (typeof window !== 'undefined') {
+      // Tarayıcı ortamında doğru host ve protokolü kullan
+      const host = window.location.host; 
+      const protocol = window.location.protocol; 
+      siteUrl = `${protocol}//${host}`;
+    }
+    
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/reset-password`,
+      redirectTo: `${siteUrl}/auth/reset-password`,
     });
     
     if (error) throw error;
@@ -578,9 +596,9 @@ export async function checkIfUserLikedPost(postId: string, ipAddress: string, us
   return !!data;
 }
 
-export async function likePost(postId: string, ipAddress: string, userAgent: string): Promise<boolean> {
+export async function likePost(postId: string, ipAddress: string): Promise<boolean> {
   // Önce kullanıcının daha önce beğenip beğenmediğini kontrol et
-  const alreadyLiked = await checkIfUserLikedPost(postId, ipAddress, userAgent);
+  const alreadyLiked = await checkIfUserLikedPost(postId, ipAddress, '');
   
   if (alreadyLiked) {
     // Kullanıcı zaten beğenmiş, beğeniyi kaldır
@@ -603,7 +621,7 @@ export async function likePost(postId: string, ipAddress: string, userAgent: str
       .insert({
         post_id: postId,
         ip_address: ipAddress,
-        user_agent: userAgent
+        user_agent: navigator?.userAgent || 'unknown'
       });
 
     if (error) {
