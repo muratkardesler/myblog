@@ -57,12 +57,12 @@ export default function ProfileEditPage() {
           
           setUser(refreshedUserInfo.user);
           setFormData({
-            full_name: refreshedUserInfo.user?.full_name || '',
+            full_name: refreshedUserInfo.user?.email ? refreshedUserInfo.user.email.split('@')[0] : '',
           });
         } else {
           setUser(userInfo.user);
           setFormData({
-            full_name: userInfo.user?.full_name || '',
+            full_name: userInfo.user?.email ? userInfo.user.email.split('@')[0] : '',
           });
         }
       } catch (error) {

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { createClient, getCurrentUser } from '@/lib/supabase';
+import { createClient, getCurrentUser, refreshAuthSession } from '@/lib/supabase';
 import toast from 'react-hot-toast';
 import Link from 'next/link';
 
@@ -36,41 +36,30 @@ export default function ProfilePage() {
         }
         
         // Oturum varsa kullanıcı bilgilerini al
-        const { success, user: authUser, profile, error } = await getCurrentUser();
+        const { success, user: authUser } = await getCurrentUser();
         
         if (!success || !authUser) {
-          console.error("Kullanıcı bilgisi alınamadı:", error?.message);
+          console.error("Kullanıcı bilgisi alınamadı");
           
           // Oturum yenilemeyi dene
-          const { success: refreshSuccess } = await supabase.auth.refreshSession();
+          const refreshResult = await refreshAuthSession();
           
-          if (!refreshSuccess) {
-            // Yenilemeden sonra hala başarısızsa çıkış yap ve giriş sayfasına yönlendir
-            await supabase.auth.signOut();
-            router.push('/auth/login');
+          if (!refreshResult.success) {
+            router.push('/auth/login?redirect=/profile');
             return;
           }
           
-          // Bir kez daha kontrol et
+          // Yeniden kullanıcı bilgilerini getir
           const secondCheck = await getCurrentUser();
+          
           if (!secondCheck.success) {
-            // Hala başarısızsa çıkış yap
-            await supabase.auth.signOut();
-            router.push('/auth/login');
+            router.push('/auth/login?redirect=/profile');
             return;
           }
           
-          // İkinci deneme başarılıysa kullanıcı bilgilerini ayarla
-          setUser({
-            ...secondCheck.user,
-            ...secondCheck.profile
-          });
+          setUser(secondCheck.user);
         } else {
-          // Başarılı ise kullanıcı bilgilerini ayarla
-          setUser({
-            ...authUser,
-            ...profile
-          });
+          setUser(authUser);
         }
       } catch (error) {
         console.error("Profil sayfası yüklenirken hata:", error);
@@ -94,12 +83,9 @@ export default function ProfilePage() {
           router.push('/auth/login');
         } else if (event === 'TOKEN_REFRESHED') {
           // Token yenilendiğinde kullanıcı bilgilerini yeniden al
-          const { success, user: refreshedUser, profile } = await getCurrentUser();
+          const { success, user: refreshedUser } = await getCurrentUser();
           if (success && refreshedUser) {
-            setUser({
-              ...refreshedUser,
-              ...profile
-            });
+            setUser(refreshedUser);
           }
         }
       }

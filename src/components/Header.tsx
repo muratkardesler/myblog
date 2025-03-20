@@ -6,6 +6,11 @@ import { User } from '@/lib/types';
 import { logoutUser, createClient, getCurrentUser } from '@/lib/supabase';
 import toast from 'react-hot-toast';
 
+interface UserInfo {
+  email: string;
+  fullName: string;
+}
+
 interface HeaderProps {
   mobileMenuOpen: boolean;
   setMobileMenuOpen: (isOpen: boolean) => void;
@@ -15,7 +20,7 @@ export default function Header({ mobileMenuOpen, setMobileMenuOpen }: HeaderProp
   const pathname = usePathname();
   const router = useRouter();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [user, setUser] = useState<User | null>(null);
+  const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const supabase = createClient();
   const [isAuthLoading, setAuthLoading] = useState(false);
@@ -27,19 +32,22 @@ export default function Header({ mobileMenuOpen, setMobileMenuOpen }: HeaderProp
         setAuthLoading(true);
         
         // getCurrentUser fonksiyonu ile kullanıcı bilgilerini al
-        const { success, user, profile } = await getCurrentUser();
+        const { success, user } = await getCurrentUser();
         
         if (success && user) {
           setIsAuthenticated(true);
-          setUser({ ...user, ...profile });
+          setUserInfo({
+            email: user.email || '',
+            fullName: user.full_name || user.email?.split('@')[0] || '',
+          });
         } else {
           setIsAuthenticated(false);
-          setUser(null);
+          setUserInfo(null);
         }
       } catch (error) {
         console.error('Header oturum kontrolü hatası:', error);
         setIsAuthenticated(false);
-        setUser(null);
+        setUserInfo(null);
       } finally {
         setAuthLoading(false);
         setIsReady(true);
@@ -56,7 +64,7 @@ export default function Header({ mobileMenuOpen, setMobileMenuOpen }: HeaderProp
           checkAuth();
         } else if (event === 'SIGNED_OUT') {
           setIsAuthenticated(false);
-          setUser(null);
+          setUserInfo(null);
         }
       }
     );
@@ -125,7 +133,7 @@ export default function Header({ mobileMenuOpen, setMobileMenuOpen }: HeaderProp
       
       // Durumu güncelle
       setIsAuthenticated(false);
-      setUser(null);
+      setUserInfo(null);
       
       // Sayfayı yenile ve anasayfaya yönlendir
       router.refresh();
@@ -196,11 +204,11 @@ export default function Header({ mobileMenuOpen, setMobileMenuOpen }: HeaderProp
             </nav>
             
             <div className="hidden md:flex items-center space-x-4">
-              {isAuthenticated && user ? (
+              {isAuthenticated && userInfo ? (
                 <div className="flex items-center space-x-3">
                   <div className="text-gray-300">
                     <span className="text-purple-400 font-medium">Hoş geldiniz, </span> 
-                    {user?.full_name || ''}
+                    {userInfo?.fullName}
                   </div>
                   <Link 
                     href="/profile" 
@@ -263,11 +271,11 @@ export default function Header({ mobileMenuOpen, setMobileMenuOpen }: HeaderProp
           <Link href="/blog" className={`${pathname === '/blog' ? 'text-purple-400' : 'text-gray-300'} hover:text-primary transition-colors py-2`}>Blog</Link>
           <Link href="/contact" className={`${pathname === '/contact' ? 'text-purple-400' : 'text-gray-300'} hover:text-primary transition-colors py-2`}>İletişim</Link>
           
-          {isAuthenticated && user ? (
+          {isAuthenticated && userInfo ? (
             <>
               <div className="text-gray-300 py-2">
                 <span className="text-purple-400 font-medium">Hoş geldiniz, </span> 
-                {user?.full_name || ''}
+                {userInfo?.fullName}
               </div>
               <Link 
                 href="/profile" 

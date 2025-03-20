@@ -52,22 +52,22 @@ export default function ReportsPage() {
     const checkAuth = async () => {
       try {
         console.log("Raporlar sayfası oturum kontrolü başladı");
-        const { success, profile } = await getCurrentUser();
+        const { success, user } = await getCurrentUser();
 
-        if (!success || !profile) {
+        if (!success || !user) {
           console.log("Oturum bulunamadı, giriş sayfasına yönlendiriliyor");
-          router.push('/auth/login');
+          router.push('/auth/login?redirect=/profile/reports');
           return;
         }
 
-        console.log("Kullanıcı profili bulundu:", profile.full_name);
-        setUser(profile as User);
+        console.log("Oturum doğrulandı, raporlar yükleniyor");
+        setUser(user);
         setAuthChecked(true);
         setLoading(false);
         
         // Kullanıcı bilgileri yüklendikten sonra rapor verilerini getir
         if (selectedReport === 'monthly') {
-          loadMonthlyReport(profile.id);
+          loadMonthlyReport(user.id);
         }
       } catch (error) {
         console.error('Profil verisi yüklenirken hata:', error);

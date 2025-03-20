@@ -13,6 +13,7 @@ interface AuthInputProps {
   isPassword?: boolean;
   showPassword?: boolean;
   setShowPassword?: Dispatch<SetStateAction<boolean>>;
+  icon?: string;
 }
 
 export default function AuthInput({
@@ -27,7 +28,8 @@ export default function AuthInput({
   error,
   isPassword,
   showPassword,
-  setShowPassword
+  setShowPassword,
+  icon
 }: AuthInputProps) {
   return (
     <div className="space-y-1">
@@ -35,6 +37,11 @@ export default function AuthInput({
         {label}
       </label>
       <div className="relative rounded-lg">
+        {icon && (
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <i className={`${icon} text-gray-400`}></i>
+          </div>
+        )}
         <input
           type={isPassword && showPassword ? 'text' : type}
           id={id}
@@ -46,7 +53,7 @@ export default function AuthInput({
           placeholder={placeholder}
           className={`block w-full bg-gray-800/50 border ${
             error ? 'border-red-500/70' : 'border-gray-600/50'
-          } rounded-lg py-2.5 pr-10 pl-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-colors`}
+          } rounded-lg py-2.5 pr-10 ${icon ? 'pl-10' : 'pl-3'} text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-colors`}
           data-1p-ignore={isPassword ? false : true}
         />
         

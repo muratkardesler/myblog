@@ -15,9 +15,6 @@ import { getCurrentUser, refreshAuthSession } from '@/lib/supabase';
 import Link from 'next/link';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
-import { format } from 'date-fns';
-import { tr } from 'date-fns/locale';
-import LoadingDots from '@/components/LoadingDots';
 
 // İş kaydı tipi
 interface WorkLog {

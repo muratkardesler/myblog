@@ -1,6 +1,6 @@
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { Database } from './database.types';
-import { Category, Post, PostWithCategory } from './types';
+import { Category, PostWithCategory } from './types';
 
 // Filtrelerde kullanılacak tiplemeler
 export interface PostFilters {
@@ -17,67 +17,50 @@ export function createClient() {
 // Supabase client instance oluştur
 export const supabase = createClient();
 
-// Mevcut oturum açmış kullanıcıyı getir
-export async function getCurrentUser() {
+// Mevcut kullanıcıyı getir
+export async function getCurrentUser(): Promise<{ success: boolean; user: Database['public']['Tables']['users']['Row'] | null }> {
+  const supabase = createClientComponentClient();
+  
   try {
-    const supabase = createClient();
+    const { data: { user }, error } = await supabase.auth.getUser();
     
-    // Önce mevcut oturumu al
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-    
-    if (sessionError || !session) {
-      return { 
-        success: false, 
-        error: sessionError || new Error('Oturum bulunamadı.'),
-        user: null,
-        profile: null 
-      };
+    if (error) {
+      throw error;
     }
     
-    // Oturumdaki kullanıcı bilgisini al
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    
-    if (userError || !user) {
-      return { 
-        success: false, 
-        error: userError || new Error('Kullanıcı bilgileri alınamadı.'),
-        user: null,
-        profile: null 
-      };
+    if (!user) {
+      return { success: false, user: null };
     }
     
-    // Kullanıcı profil verisini veritabanından çek
-    const { data: profile, error: profileError } = await supabase
+    // Veritabanından kullanıcı bilgilerini getir
+    const { data, error: profileError } = await supabase
       .from('users')
       .select('*')
       .eq('id', user.id)
       .single();
     
     if (profileError) {
-      console.error("Profil bilgileri alınamadı:", profileError);
-      // Profil verisi bulunamasa bile kullanıcıyı döndür
+      // Eğer profil bulunamazsa, auth verilerini kullan
       return { 
         success: true, 
-        error: profileError,
-        user,
-        profile: null
+        user: {
+          id: user.id,
+          email: user.email || '',
+          created_at: user.created_at || '',
+          full_name: '',
+          updated_at: '',
+          last_login: '',
+          is_active: true
+        }
       };
     }
     
-    return { 
-      success: true, 
-      error: null,
-      user,
-      profile
-    };
+    // Veritabanından gelen kullanıcı bilgilerini döndür
+    return { success: true, user: data };
+    
   } catch (error) {
-    console.error('getCurrentUser hatası:', error);
-    return { 
-      success: false, 
-      error: error instanceof Error ? error : new Error('Bilinmeyen bir hata oluştu.'),
-      user: null,
-      profile: null 
-    };
+    console.error('Kullanıcı bilgileri alınırken hata:', error);
+    return { success: false, user: null };
   }
 }
 
@@ -239,7 +222,15 @@ export async function getLatestPosts(limit = 6): Promise<PostWithCategory[]> {
       .order('published_at', { ascending: false })
       .limit(limit);
 
-    return data as PostWithCategory[] || [];
+    // Veriyi PostWithCategory tipine dönüştür
+    const formattedPosts = data?.map(post => ({
+      ...post,
+      category: Array.isArray(post.category) && post.category.length > 0 
+        ? post.category[0] 
+        : { id: '', name: '', slug: '', color: '', created_at: '', updated_at: '' }
+    })) as PostWithCategory[] || [];
+
+    return formattedPosts;
   } catch (error) {
     console.error('En son gönderiler alınırken hata:', error);
     return [];
@@ -272,7 +263,15 @@ export async function getPopularPosts(limit = 5): Promise<PostWithCategory[]> {
       .order('published_at', { ascending: false })
       .limit(limit);
 
-    return data as PostWithCategory[] || [];
+    // Veriyi PostWithCategory tipine dönüştür
+    const formattedPosts = data?.map(post => ({
+      ...post,
+      category: Array.isArray(post.category) && post.category.length > 0 
+        ? post.category[0] 
+        : { id: '', name: '', slug: '', color: '', created_at: '', updated_at: '' }
+    })) as PostWithCategory[] || [];
+
+    return formattedPosts;
   } catch (error) {
     console.error('Popüler gönderiler alınırken hata:', error);
     return [];
@@ -305,8 +304,18 @@ export async function getFeaturedPost(): Promise<PostWithCategory | null> {
       .order('published_at', { ascending: false })
       .limit(1)
       .single();
-
-    return data as PostWithCategory || null;
+      
+    if (!data) return null;
+    
+    // Veriyi PostWithCategory tipine dönüştür
+    const formattedPost = {
+      ...data,
+      category: Array.isArray(data.category) && data.category.length > 0 
+        ? data.category[0] 
+        : { id: '', name: '', slug: '', color: '', created_at: '', updated_at: '' }
+    } as PostWithCategory;
+    
+    return formattedPost;
   } catch (error) {
     console.error('Öne çıkan gönderi alınırken hata:', error);
     return null;
@@ -519,4 +528,118 @@ export const refreshAuthSession = async () => {
     console.error('Auth refresh error:', error);
     return { success: false, error };
   }
-}; 
+};
+
+// Şifre sıfırlama e-postası gönder
+export async function resetPassword(email: string): Promise<{ success: boolean; message: string }> {
+  const supabase = createClientComponentClient();
+  try {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/auth/reset-password?update=true`,
+    });
+
+    if (error) {
+      throw error;
+    }
+
+    return {
+      success: true,
+      message: 'Şifre sıfırlama bağlantısı e-posta adresinize gönderildi.'
+    };
+  } catch (error: any) {
+    console.error('Şifre sıfırlama hatası:', error);
+    return {
+      success: false,
+      message: error.message || 'Şifre sıfırlama işlemi başarısız oldu.'
+    };
+  }
+}
+
+// Şifre güncelleme
+export async function updatePassword(newPassword: string): Promise<{ success: boolean; message: string }> {
+  const supabase = createClientComponentClient();
+  try {
+    const { error } = await supabase.auth.updateUser({
+      password: newPassword
+    });
+
+    if (error) {
+      throw error;
+    }
+
+    return {
+      success: true,
+      message: 'Şifreniz başarıyla güncellendi.'
+    };
+  } catch (error: any) {
+    console.error('Şifre güncelleme hatası:', error);
+    return {
+      success: false,
+      message: error.message || 'Şifre güncelleme işlemi başarısız oldu.'
+    };
+  }
+}
+
+// Kategori bazlı yazıları getir
+export async function getPostsByCategory(slug: string, page = 1, limit = 6): Promise<{ posts: PostWithCategory[]; total: number }> {
+  const supabase = createClientComponentClient();
+  try {
+    // Önce kategoriyi bul
+    const { data: categoryData } = await supabase
+      .from('categories')
+      .select('id')
+      .eq('slug', slug)
+      .single();
+
+    if (!categoryData) {
+      return { posts: [], total: 0 };
+    }
+
+    // Toplam yazı sayısını al
+    const { count } = await supabase
+      .from('posts')
+      .select('id', { count: 'exact' })
+      .eq('category_id', categoryData.id)
+      .eq('status', 'published');
+
+    // Yazıları getir
+    const { data } = await supabase
+      .from('posts')
+      .select(`
+        id, 
+        title,
+        slug,
+        excerpt,
+        content,
+        featured_image,
+        status,
+        is_featured,
+        is_popular,
+        created_at,
+        updated_at,
+        published_at,
+        category_id,
+        category:category_id (id, name, slug, color)
+      `)
+      .eq('category_id', categoryData.id)
+      .eq('status', 'published')
+      .order('published_at', { ascending: false })
+      .range((page - 1) * limit, page * limit - 1);
+
+    // Veriyi PostWithCategory tipine dönüştür
+    const formattedPosts = data?.map(post => ({
+      ...post,
+      category: Array.isArray(post.category) && post.category.length > 0 
+        ? post.category[0] 
+        : { id: '', name: '', slug: '', color: '', created_at: '', updated_at: '' }
+    })) as PostWithCategory[] || [];
+
+    return { 
+      posts: formattedPosts, 
+      total: count || 0 
+    };
+  } catch (error) {
+    console.error('Kategori yazıları alınırken hata:', error);
+    return { posts: [], total: 0 };
+  }
+} 
