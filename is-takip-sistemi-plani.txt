@@ -1,0 +1,141 @@
+# İŞ TAKİP SİSTEMİ GELİŞTİRME PLANI
+
+## AŞAMA 1: VERİTABANI YAPISI
+- [x] 1.1. Supabase'de yeni tablolar oluşturma:
+  - [x] `work_logs` tablosu (iş kayıtları)
+    - id (uuid) - PK
+    - user_id (uuid) - FK (users tablosuna referans)
+    - date (date) - İş tarihi
+    - project_code (text) - Proje kodu (örn: MLSFT-1128)
+    - client_name (text) - Müşteri adı
+    - contact_person (text) - İletişim kişisi
+    - description (text) - Yapılan iş açıklaması
+    - duration (numeric) - Süre (0.25, 0.50, 0.75, 1.00 vb.)
+    - is_completed (boolean) - Tamamlandı mı? (default: true)
+    - created_at (timestamp)
+    - updated_at (timestamp)
+
+  - [x] Supabase RLS (Row Level Security) kuralları:
+    - [x] Kullanıcılar sadece kendi iş kayıtlarını görebilir
+    - [x] Kullanıcılar sadece kendi iş kayıtlarını düzenleyebilir
+    - [x] Admin kullanıcıları tüm kayıtları görebilir
+
+- [x] 1.2. Supabase fonksiyonları oluşturma:
+  - [x] Günlük iş kontrolü yapan fonksiyon (eksik günleri tespit eden)
+  - [x] Haftalık/aylık rapor oluşturan fonksiyon (Excel formatında)
+  - [ ] E-posta bildirim fonksiyonu (eksik günler için)
+
+## AŞAMA 2: KULLANICI ARAYÜZÜ TASARIMI
+- [x] 2.1. Profil sayfasına iş takip sekmesi ekleme
+  - [x] Navigasyon sekmelerini tasarlama (Profil Bilgileri, İş Takibi, Raporlar)
+  - [x] İş takip ekranının temel layout'unu hazırlama
+  - [x] Mevcut profil sayfasıyla uyumlu olacak şekilde tasarım
+
+- [x] 2.2. İş takip ekranının tasarımı
+  - [x] Aylık takvim/tablo görünümü
+  - [x] Günlük iş giriş formunu oluşturma
+    - [x] Tarih seçici
+    - [x] Proje kodu giriş alanı
+    - [x] Müşteri adı alanı
+    - [x] İletişim kişisi alanı
+    - [x] İş açıklaması alanı
+    - [x] Süre seçici (0.25, 0.50, 0.75, 1.00, vb.)
+  - [x] Toplu iş görüntüleme ve filtreleme alanı
+
+- [x] 2.3. İstatistikler ve grafikler
+  - [x] Aylık çalışma süresi grafiği
+  - [x] Proje bazlı çalışma süresi dağılımı
+  - [x] Tamamlanan/Eksik gün göstergeleri
+  - [x] Aylık performans göstergesi (doldurulmuş günler)
+
+## AŞAMA 3: TEMEL CRUD İŞLEMLERİ
+- [x] 3.1. İş kaydı ekleme
+  - [x] İş giriş formunu kodlama
+  - [x] Veritabanına kayıt işlemlerini yapma
+  - [x] Gün bazlı kontrol (günde max 1.0 birim çalışma süresi)
+
+- [x] 3.2. İş kayıtlarını listeleme
+  - [x] Mevcut kayıtları görüntüleme
+  - [x] Tarih bazlı filtreleme işlemleri
+  - [x] Proje/müşteri bazlı filtreleme
+
+- [ ] 3.3. İş kaydı güncelleme
+  - [ ] Düzenleme formunu kodlama
+  - [ ] Güncelleme işlemlerini yapma
+  - [ ] Geçmiş kayıtları düzenleme sınırlaması (opsiyonel)
+
+- [x] 3.4. İş kaydı silme
+  - [x] Silme onay mekanizması
+  - [x] Silme işlemlerini yapma
+  - [x] Yetkilendirme kontrolü
+
+## AŞAMA 4: OTOMATİZASYON ÖZELLİKLERİ
+- [ ] 4.1. E-posta bildirim sistemi
+  - [ ] Günlük iş giriş hatırlatması
+  - [ ] Eksik günler için uyarı e-postası
+  - [ ] Supabase Auth ve mevcut e-posta entegrasyonu
+
+- [x] 4.2. Excel raporlama
+  - [x] Excel formatında rapor oluşturma
+  - [ ] Aylık raporu e-posta ile gönderme
+  - [x] İsteğe bağlı rapor oluşturma ve indirme
+  - [x] Excel dosyasının Excel formatında indirilmesi
+
+- [x] 4.3. Takvim görünümü
+  - [x] İş kayıtlarını takvimde görüntüleme
+  - [x] Tamamlanan/eksik günleri işaretleme
+  - [x] Haftalık ve aylık görünüm seçenekleri
+
+## AŞAMA 5: GELİŞMİŞ ÖZELLİKLER
+- [x] 5.1. Çoklu iş kaydı
+  - [x] Aynı gün içinde farklı projeler için iş kaydı oluşturma
+  - [x] Toplam sürenin 1.0'ı geçmemesini sağlama
+  - [x] Gün bazlı toplam süre kontrolü
+
+- [ ] 5.2. Ekip yönetimi (opsiyonel)
+  - [ ] Ekip üyelerinin iş kayıtlarını görüntüleme (yöneticiler için)
+  - [ ] Ekip performans raporları
+  - [ ] Yönetici ve kullanıcı rollerini düzenleme
+
+- [ ] 5.3. Hatırlatıcılar ve bildirimler
+  - [ ] Tarayıcı bildirimleri
+  - [ ] Mobil bildirimler (PWA)
+  - [ ] Bildirim tercihlerini yönetme
+
+## AŞAMA 6: TEST VE İYİLEŞTİRME
+- [ ] 6.1. Fonksiyonel testler
+  - [ ] CRUD işlemleri testleri
+  - [ ] Otomasyon testleri
+  - [ ] Kullanıcı senaryoları testleri
+
+- [ ] 6.2. Kullanıcı testleri
+  - [ ] Gerçek kullanıcılarla test etme
+  - [ ] Geri bildirimleri toplama
+  - [ ] Kullanıcı deneyimi iyileştirmeleri
+
+- [ ] 6.3. Performans iyileştirmeleri
+  - [ ] Sayfa yüklenme süresini optimize etme
+  - [ ] Veritabanı sorgularını iyileştirme
+  - [ ] Önbellek mekanizmaları
+
+## AŞAMA 7: DÖKÜMENTASYON VE CİLALAMA
+- [ ] 7.1. Kullanıcı kılavuzu
+  - [ ] Nasıl kullanılır dokümanı
+  - [ ] SSS (Sık Sorulan Sorular)
+  - [ ] Video eğitimler (opsiyonel)
+
+- [ ] 7.2. Son dokunuşlar
+  - [ ] Arayüz iyileştirmeleri
+  - [ ] Mobil uyumluluk kontrolleri
+  - [ ] Küçük hata düzeltmeleri
+
+## AŞAMA 8: CANLI ORTAMA AKTARMA
+- [ ] 8.1. Canlı ortama hazırlık
+  - [ ] Tüm test kontrollerinin tamamlanması
+  - [ ] Veritabanı migrasyonu
+  - [ ] Güvenlik kontrolü
+
+- [ ] 8.2. Canlı ortama aktarma
+  - [ ] Sistemin kullanıma açılması
+  - [ ] Kullanıcı eğitimi
+  - [ ] Geribildirim toplama ve sürekli iyileştirme 

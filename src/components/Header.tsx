@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { useRouter, usePathname } from 'next/navigation';
 import { User } from '@/lib/types';
-import { getCurrentUser } from '@/lib/supabase';
+import { logoutUser, createClient, getCurrentUser } from '@/lib/supabase';
 import toast from 'react-hot-toast';
 
 interface HeaderProps {
@@ -17,116 +17,55 @@ export default function Header({ mobileMenuOpen, setMobileMenuOpen }: HeaderProp
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
-  const supabase = createClientComponentClient();
+  const supabase = createClient();
+  const [isAuthLoading, setAuthLoading] = useState(false);
+  const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
-    // Komponent mount durumunu takip et
-    let isMounted = true;
-    
-    // Oturum kontrolü için interval süresini uzatalım (10sn'den 30sn'ye)
-    const authCheckInterval = setInterval(checkAuth, 30000);
-    
-    // Otomatik kimlik doğrulama kontrolü fonksiyonu
-    async function checkAuth() {
+    const checkAuth = async () => {
       try {
-        // Gerçekten gerekli olmadıkça log yazdırmayalım
-        // console.log("Header oturum kontrolü başladı");
-
-        // getCurrentUser fonksiyonunu kullanarak daha güvenilir bir kontrol yap
-        const { success, profile } = await getCurrentUser();
+        setAuthLoading(true);
         
-        // console.log("Header oturum durumu:", success ? "Oturum var" : "Oturum yok");
+        // getCurrentUser fonksiyonu ile kullanıcı bilgilerini al
+        const { success, user, profile } = await getCurrentUser();
         
-        if (isMounted) {
-          // Durumda bir değişiklik varsa state'i güncelle
-          if (isAuthenticated !== success) {
-            setIsAuthenticated(success);
-          }
-          
-          if (success && profile) {
-            // Kullanıcı bilgisini güncelle
-            setUser(profile as User);
-          } else if (user !== null) {
-            setUser(null);
-          }
+        if (success && user) {
+          setIsAuthenticated(true);
+          setUser({ ...user, ...profile });
+        } else {
+          setIsAuthenticated(false);
+          setUser(null);
         }
       } catch (error) {
-        console.error('Oturum kontrolü hatası:', error);
-        if (isMounted && isAuthenticated) {
+        console.error('Header oturum kontrolü hatası:', error);
+        setIsAuthenticated(false);
+        setUser(null);
+      } finally {
+        setAuthLoading(false);
+        setIsReady(true);
+      }
+    };
+    
+    // Sayfa yüklendiğinde kontrolü yap
+    checkAuth();
+    
+    // Auth durum değişikliklerini dinle
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        if (event === 'SIGNED_IN' && session) {
+          checkAuth();
+        } else if (event === 'SIGNED_OUT') {
           setIsAuthenticated(false);
           setUser(null);
         }
       }
-    }
-
-    // İlk yüklenmede bir kez kontrol et ve sonra intervale bırak
-    checkAuth();
+    );
     
-    // Oturum değişikliklerini dinle
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      // Gerçekten gerekli olmadıkça log yazdırmayalım
-      // console.log("Oturum durumu değişti, event:", event);
-      
-      // Sadece kullanıcı gerçekten yeni giriş yaptığında bildirimi göster
-      if (event === 'SIGNED_IN' && session?.user?.aud === 'authenticated') {
-        // Sayfayı yeniden yüklediyse veya sayfa ilk yüklendiğinde bildirimi gösterme
-        const lastSignInTime = window.localStorage.getItem('last_sign_in_time');
-        const currentTime = new Date().getTime();
-        
-        // Son giriş zamanı kontrolü - 10 sn içinde tekrar bildirim gösterme
-        if (!lastSignInTime || (currentTime - parseInt(lastSignInTime)) > 10000) {
-          // Son giriş zamanını kaydet
-          window.localStorage.setItem('last_sign_in_time', currentTime.toString());
-          
-          toast.custom(
-            (t) => (
-              <div
-                className={`${
-                  t.visible ? 'animate-enter' : 'animate-leave'
-                } max-w-md w-full bg-gradient-to-br from-green-900/90 to-green-800/90 backdrop-blur-md shadow-lg rounded-xl pointer-events-auto flex border border-green-500/30`}
-              >
-                <div className="flex-1 w-0 p-4">
-                  <div className="flex items-start">
-                    <div className="flex-shrink-0 pt-0.5">
-                      <div className="h-10 w-10 rounded-full bg-green-500/10 flex items-center justify-center">
-                        <i className="ri-check-line text-xl text-green-400"></i>
-                      </div>
-                    </div>
-                    <div className="ml-3 flex-1">
-                      <p className="text-sm font-medium text-white">
-                        Giriş Başarılı
-                      </p>
-                      <p className="mt-1 text-sm text-gray-300">
-                        Hoş geldiniz! Başarıyla giriş yaptınız.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-                <div className="flex border-l border-green-500/30">
-                  <button
-                    onClick={() => toast.dismiss(t.id)}
-                    className="w-full border border-transparent rounded-none rounded-r-xl p-4 flex items-center justify-center text-sm font-medium text-green-300 hover:text-white focus:outline-none"
-                  >
-                    <i className="ri-close-line text-lg"></i>
-                  </button>
-                </div>
-              </div>
-            ),
-            { duration: 3000 }
-          );
-        }
-      }
-      
-      checkAuth();
-    });
-
-    // Temizleme fonksiyonu
+    // Temizlik işlemi
     return () => {
-      isMounted = false;
-      clearInterval(authCheckInterval);
       subscription.unsubscribe();
     };
-  }, [supabase]);
+  }, [supabase.auth]);
 
   const handleLogout = async () => {
     try {

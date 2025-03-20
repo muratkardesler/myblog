@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { Dispatch, SetStateAction, ChangeEvent } from 'react';
 
 interface AuthInputProps {
   type: string;
@@ -6,12 +6,13 @@ interface AuthInputProps {
   name: string;
   label: string;
   value: string;
-  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  placeholder?: string;
-  required?: boolean;
-  icon?: string;
+  onChange: (e: ChangeEvent<HTMLInputElement>) => void;
+  placeholder: string;
+  required: boolean;
   error?: string;
   isPassword?: boolean;
+  showPassword?: boolean;
+  setShowPassword?: Dispatch<SetStateAction<boolean>>;
 }
 
 export default function AuthInput({
@@ -22,49 +23,52 @@ export default function AuthInput({
   value,
   onChange,
   placeholder,
-  required = false,
-  icon,
+  required,
   error,
-  isPassword = false,
+  isPassword,
+  showPassword,
+  setShowPassword
 }: AuthInputProps) {
-  const [showPassword, setShowPassword] = useState(false);
-
   return (
     <div className="space-y-1">
-      <label htmlFor={id} className="block text-sm font-medium text-gray-300 mb-1">
-        {label} {required && <span className="text-red-500">*</span>}
+      <label htmlFor={id} className="block text-sm font-medium text-gray-200">
+        {label}
       </label>
-      <div className="relative">
-        {icon && (
-          <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-            <i className={`${icon} text-gray-400`}></i>
-          </div>
-        )}
+      <div className="relative rounded-lg">
         <input
-          type={isPassword ? (showPassword ? 'text' : 'password') : type}
+          type={isPassword && showPassword ? 'text' : type}
           id={id}
           name={name}
           value={value}
           onChange={onChange}
-          className={`w-full px-4 ${
-            icon ? 'pl-10' : ''
-          } py-2 bg-gray-800 border ${
-            error ? 'border-red-500' : 'border-gray-700'
-          } rounded-xl text-gray-100 focus:outline-none focus:border-primary`}
-          placeholder={placeholder}
+          autoComplete={isPassword ? "current-password" : "on"}
           required={required}
+          placeholder={placeholder}
+          className={`block w-full bg-gray-800/50 border ${
+            error ? 'border-red-500/70' : 'border-gray-600/50'
+          } rounded-lg py-2.5 pr-10 pl-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-colors`}
+          data-1p-ignore={isPassword ? false : true}
         />
-        {isPassword && (
+        
+        {isPassword && setShowPassword && (
           <button
             type="button"
-            className="absolute inset-y-0 right-0 flex items-center pr-3"
             onClick={() => setShowPassword(!showPassword)}
+            className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-200 transition-colors"
           >
-            <i className={`${showPassword ? 'ri-eye-off-line' : 'ri-eye-line'} text-gray-400`}></i>
+            {showPassword ? (
+              <i className="ri-eye-off-line text-lg" aria-hidden="true"></i>
+            ) : (
+              <i className="ri-eye-line text-lg" aria-hidden="true"></i>
+            )}
           </button>
         )}
       </div>
-      {error && <p className="text-sm text-red-500">{error}</p>}
+      {error && (
+        <p className="mt-1 text-sm text-red-500">
+          {error}
+        </p>
+      )}
     </div>
   );
 } 
