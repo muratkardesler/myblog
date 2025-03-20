@@ -467,7 +467,7 @@ export async function registerUser(email: string, password: string, full_name: s
       };
     }
     
-    // Yeni kullanıcı oluştur
+    // Yeni kullanıcı oluştur - type parametresi ile doğrulama e-postası olarak gönder
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email,
       password,
@@ -475,7 +475,7 @@ export async function registerUser(email: string, password: string, full_name: s
         data: {
           full_name: full_name
         },
-        emailRedirectTo: typeof window !== 'undefined' ? `${window.location.origin}/auth/confirm` : undefined
+        emailRedirectTo: `${window.location.origin}/auth/confirm`,
       }
     });
     

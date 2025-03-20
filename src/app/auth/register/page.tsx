@@ -149,7 +149,7 @@ export default function RegisterPage() {
         return;
       }
       
-      toast.success('Kayıt işlemi başarılı! Lütfen e-postanızı kontrol edip hesabınızı doğrulayın.');
+      toast.success('Kayıt işlemi başarılı! E-posta adresinize bir onay bağlantısı gönderildi. Lütfen gelen kutunuzu kontrol edin.');
       setFormData({
         full_name: '',
         email: '',

@@ -21,37 +21,47 @@ function ConfirmContent() {
         // URL'den token değerlerini al
         const token_hash = searchParams.get('token_hash');
         const type = searchParams.get('type');
+        const code = searchParams.get('code');
         
-        if (!token_hash || !type) {
+        if ((!token_hash && !code) || !type) {
           setError('Geçersiz veya eksik doğrulama parametreleri. Lütfen e-posta bağlantınızı kontrol edin.');
           setLoading(false);
           return;
         }
         
-        // Email değişikliği veya doğrulaması
-        if (type === 'email_change' || type === 'signup') {
-          const { error } = await supabase.auth.verifyOtp({ 
+        // Email değişikliği, doğrulaması veya magic link
+        let verifyResult;
+        
+        if (token_hash) {
+          verifyResult = await supabase.auth.verifyOtp({ 
             token_hash, 
-            type: type === 'email_change' ? 'email_change' : 'signup'
+            type: type === 'email_change' ? 'email_change' : type === 'invite' ? 'invite' : 'signup'
           });
-          
-          if (error) {
-            throw error;
-          }
-          
-          setSuccess(true);
-          toast.success(type === 'signup' 
-            ? 'E-posta adresiniz başarıyla doğrulandı! Şimdi giriş yapabilirsiniz.' 
-            : 'E-posta adresiniz başarıyla değiştirildi!');
-          
-          // Başarılı doğrulama sonrası 3 saniye bekleyip yönlendir
-          setTimeout(() => {
-            router.push('/auth/login');
-          }, 3000);
-          
-        } else {
-          setError('Desteklenmeyen doğrulama türü.');
+        } else if (code) {
+          // Magic link kodu varsa buraya girecek
+          verifyResult = await supabase.auth.verifyOtp({
+            token: code,
+            type: 'recovery'
+          });
         }
+        
+        if (verifyResult?.error) {
+          throw verifyResult.error;
+        }
+        
+        setSuccess(true);
+        toast.success(
+          type === 'signup' 
+            ? 'E-posta adresiniz başarıyla doğrulandı! Şimdi giriş yapabilirsiniz.' 
+            : type === 'invite'
+            ? 'Davetiniz başarıyla kabul edildi! Şimdi giriş yapabilirsiniz.'
+            : 'E-posta adresiniz başarıyla doğrulandı!');
+        
+        // Başarılı doğrulama sonrası 3 saniye bekleyip yönlendir
+        setTimeout(() => {
+          router.push('/auth/login');
+        }, 3000);
+        
       } catch (error: any) {
         console.error('Doğrulama hatası:', error);
         setError(error.message || 'Doğrulama sırasında bir hata oluştu.');
