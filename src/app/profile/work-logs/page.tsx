@@ -15,6 +15,7 @@ import Link from 'next/link';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import Calendar from './components/Calendar';
+import DeleteConfirmModal from '@/components/DeleteConfirmModal';
 
 // İş kaydı tipi
 export interface WorkLog {
@@ -39,6 +40,14 @@ export default function WorkLogsPage() {
   const [loading, setLoading] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [authChecked, setAuthChecked] = useState(false);
+  
+  // İş kaydı silme modal state'i
+  const [deleteModal, setDeleteModal] = useState({
+    isOpen: false,
+    logId: '',
+    isLoading: false
+  });
 
   // İş kaydı form state
   const [formData, setFormData] = useState({
@@ -220,11 +229,18 @@ export default function WorkLogsPage() {
 
   // İş kaydını silme
   const handleDelete = async (id: string) => {
-    if (!confirm('Bu iş kaydını silmek istediğinize emin misiniz?')) {
-      return;
-    }
-    
+    setDeleteModal({
+      isOpen: true,
+      logId: id,
+      isLoading: false
+    });
+  };
+
+  // Silme işlemi onayı
+  const handleDeleteConfirm = async () => {
     try {
+      setDeleteModal(prev => ({ ...prev, isLoading: true }));
+      
       // Direkt auth üzerinden kullanıcı bilgisi almaya çalış
       const { data: authData, error: authError } = await supabase.auth.getUser();
       
@@ -239,7 +255,7 @@ export default function WorkLogsPage() {
       const { error } = await supabase
         .from('work_logs')
         .delete()
-        .eq('id', id);
+        .eq('id', deleteModal.logId);
         
       if (error) throw error;
       
@@ -248,6 +264,12 @@ export default function WorkLogsPage() {
     } catch (error) {
       console.error('İş kaydı silinirken hata:', error);
       toast.error('İş kaydı silinirken bir hata oluştu.');
+    } finally {
+      setDeleteModal({
+        isOpen: false,
+        logId: '',
+        isLoading: false
+      });
     }
   };
 
@@ -462,7 +484,7 @@ export default function WorkLogsPage() {
                       </div>
                       
                       <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-1">Proje Kodu</label>
+                        <label className="block text-sm font-medium text-gray-300 mb-1">Proje / Bölüm</label>
                         <input
                           type="text"
                           name="project_code"
@@ -475,32 +497,32 @@ export default function WorkLogsPage() {
                       </div>
                       
                       <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-1">Müşteri Adı</label>
+                        <label className="block text-sm font-medium text-gray-300 mb-1">Danışman</label>
                         <input
                           type="text"
                           name="client_name"
                           value={formData.client_name}
                           onChange={handleChange}
-                          placeholder="Müşteri adı girin"
+                          placeholder="Danışman adı girin"
                           className="w-full bg-gray-700 border border-gray-600 text-white rounded-lg px-3 py-2"
                           required
                         />
                       </div>
                       
                       <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-1">İletişim Kişisi</label>
+                        <label className="block text-sm font-medium text-gray-300 mb-1">Kontak Kişi</label>
                         <input
                           type="text"
                           name="contact_person"
                           value={formData.contact_person}
                           onChange={handleChange}
-                          placeholder="İletişim kişisi girin"
+                          placeholder="Kontak kişi girin"
                           className="w-full bg-gray-700 border border-gray-600 text-white rounded-lg px-3 py-2"
                         />
                       </div>
                       
                       <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-1">Yapılan İş</label>
+                        <label className="block text-sm font-medium text-gray-300 mb-1">Yapılan İş / Problem&Çözüm</label>
                         <textarea
                           name="description"
                           value={formData.description}
@@ -553,7 +575,7 @@ export default function WorkLogsPage() {
                           <thead className="bg-gray-800/70 sticky top-0">
                             <tr>
                               <th className="px-4 py-2 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Tarih</th>
-                              <th className="px-4 py-2 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Proje</th>
+                              <th className="px-4 py-2 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Proje / Bölüm</th>
                               <th className="px-4 py-2 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Süre</th>
                               <th className="px-4 py-2 text-xs font-medium text-gray-400 uppercase tracking-wider"></th>
                             </tr>
@@ -596,6 +618,17 @@ export default function WorkLogsPage() {
         </div>
       </main>
       <Footer />
+      
+      <DeleteConfirmModal
+        isOpen={deleteModal.isOpen}
+        title="İş Kaydını Sil"
+        message="Bu iş kaydını silmek istediğinize emin misiniz?"
+        confirmText="Evet, Sil"
+        cancelText="İptal"
+        isLoading={deleteModal.isLoading}
+        onConfirm={handleDeleteConfirm}
+        onCancel={() => setDeleteModal(prev => ({ ...prev, isOpen: false }))}
+      />
     </>
   );
 } 

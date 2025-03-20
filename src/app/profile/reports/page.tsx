@@ -180,35 +180,33 @@ export default function ReportsPage() {
       // Excel için veri oluştur
       const workbook = XLSX.utils.book_new();
       
-      // İstatistik sayfası oluştur
-      const statsData = [
-        ['Rapor Türü', 'Aylık İş Raporu'],
-        ['Dönem', `${monthName} ${selectedYear}`],
-        [''],
-        ['Toplam İş Günü', monthlyStats.totalDays.toString()],
-        ['Çalışılan Gün Sayısı', monthlyStats.completedDays.toString()],
-        ['Toplam Çalışma Süresi', monthlyStats.totalDuration.toFixed(2)],
-        ['Tamamlanma Oranı', `%${monthlyStats.completionPercentage.toFixed(0)}`]
-      ];
-      
-      const statsSheet = XLSX.utils.aoa_to_sheet(statsData);
-      XLSX.utils.book_append_sheet(workbook, statsSheet, 'Özet');
-      
-      // İş detayları sayfası oluştur
+      // İş detayları sayfası oluştur - sadece tarihten sonraki alanlar ile
       const excelData = reportData.map(log => ({
         'Tarih': new Date(log.date).toLocaleDateString('tr-TR'),
-        'Proje Kodu': log.project_code,
-        'Müşteri': log.client_name,
-        'İletişim Kişisi': log.contact_person || '-',
-        'Açıklama': log.description,
-        'Süre (birim)': parseFloat(String(log.duration)).toFixed(2),
+        'Proje / Bölüm': log.project_code,
+        'Danışman': user?.full_name || '',
+        'Kontak Kişi': log.contact_person || '',
+        'Yapılan İş / Problem&Çözüm': log.description,
+        'Süre': parseFloat(String(log.duration)).toFixed(2)
       }));
       
       const detailsSheet = XLSX.utils.json_to_sheet(excelData);
-      XLSX.utils.book_append_sheet(workbook, detailsSheet, 'Detaylar');
+      
+      // Sütun genişliklerini ayarla
+      const wscols = [
+        { wch: 12 },  // Tarih
+        { wch: 15 },  // Proje / Bölüm
+        { wch: 20 },  // Danışman
+        { wch: 20 },  // Kontak Kişi
+        { wch: 50 },  // Yapılan İş / Problem&Çözüm
+        { wch: 8 }    // Süre
+      ];
+      
+      detailsSheet['!cols'] = wscols;
+      XLSX.utils.book_append_sheet(workbook, detailsSheet, 'İş Raporu');
       
       // Dosyayı indir
-      XLSX.writeFile(workbook, `İş_Raporu_${user?.full_name.replace(' ', '_')}_${monthName}_${selectedYear}.xlsx`);
+      XLSX.writeFile(workbook, `İş_Raporu_${user?.full_name?.replace(/\s+/g, '_')}_${monthName}_${selectedYear}.xlsx`);
       toast.success('Rapor başarıyla indirildi.');
     } catch (error) {
       console.error('Excel dosyası oluşturulurken hata:', error);
@@ -336,15 +334,6 @@ export default function ReportsPage() {
                 <div className="bg-gray-700/30 border border-gray-600/30 rounded-xl p-5 mb-8">
                   <div className="flex flex-wrap items-center justify-between mb-4">
                     <h2 className="text-lg font-medium text-white">Rapor Özeti</h2>
-                    
-                    <button
-                      onClick={handleExportExcel}
-                      disabled={loadingReport || reportData.length === 0}
-                      className="flex items-center py-2 px-4 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg focus:outline-none transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <i className="ri-file-excel-2-line mr-2"></i>
-                      Excel Olarak İndir
-                    </button>
                   </div>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -373,47 +362,57 @@ export default function ReportsPage() {
                   </div>
                 </div>
                 
-                {/* Rapor detayları */}
-                <div className="bg-gray-700/30 border border-gray-600/30 rounded-xl p-5">
-                  <h2 className="text-lg font-medium text-white mb-4">Rapor Detayları</h2>
+                {/* Rapor İçeriği */}
+                <div className="relative overflow-x-auto mt-6 bg-gray-800/50 border border-gray-700/50 rounded-xl p-6">
+                  <h3 className="text-xl font-semibold text-white mb-4">Rapor İçeriği</h3>
                   
                   {loadingReport ? (
                     <div className="flex justify-center items-center py-10">
                       <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-purple-500"></div>
                     </div>
                   ) : reportData.length > 0 ? (
-                    <div className="overflow-auto max-h-[400px] custom-scrollbar">
-                      <table className="min-w-full">
-                        <thead className="bg-gray-800/70 sticky top-0">
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm text-left text-gray-300">
+                        <thead className="text-xs text-gray-400 uppercase bg-gray-700/50">
                           <tr>
-                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Tarih</th>
-                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Proje</th>
-                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Müşteri</th>
-                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Açıklama</th>
-                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Süre</th>
+                            <th scope="col" className="px-4 py-3">Tarih</th>
+                            <th scope="col" className="px-4 py-3">Danışman</th>
+                            <th scope="col" className="px-4 py-3">Yapılan İş / Problem&Çözüm</th>
+                            <th scope="col" className="px-4 py-3">Süre</th>
+                            <th scope="col" className="px-4 py-3">Proje / Bölüm</th>
+                            <th scope="col" className="px-4 py-3">Kontak Kişi</th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-gray-700/30">
+                        <tbody>
                           {reportData.map((log) => (
-                            <tr key={log.id} className="hover:bg-gray-700/20">
-                              <td className="px-4 py-3 text-sm text-gray-200">
-                                {new Date(log.date).toLocaleDateString('tr-TR')}
-                              </td>
-                              <td className="px-4 py-3 text-sm text-white">{log.project_code}</td>
-                              <td className="px-4 py-3 text-sm text-gray-300">{log.client_name}</td>
-                              <td className="px-4 py-3 text-sm text-gray-300">
-                                <div className="truncate max-w-[250px]">{log.description}</div>
-                              </td>
-                              <td className="px-4 py-3 text-sm text-white">{parseFloat(String(log.duration)).toFixed(2)}</td>
+                            <tr key={log.id} className="border-b border-gray-700/30 hover:bg-gray-700/20">
+                              <td className="px-4 py-3">{new Date(log.date).toLocaleDateString('tr-TR')}</td>
+                              <td className="px-4 py-3">{user?.full_name || ''}</td>
+                              <td className="px-4 py-3">{log.description}</td>
+                              <td className="px-4 py-3">{parseFloat(String(log.duration)).toFixed(2)}</td>
+                              <td className="px-4 py-3">{log.project_code}</td>
+                              <td className="px-4 py-3">{log.contact_person || ''}</td>
                             </tr>
                           ))}
                         </tbody>
                       </table>
                     </div>
                   ) : (
-                    <div className="bg-gray-800/30 text-center py-8 px-4 rounded-lg">
-                      <i className="ri-file-list-3-line text-4xl text-gray-500 mb-2"></i>
-                      <p className="text-gray-400">Seçilen dönem için iş kaydı bulunmuyor.</p>
+                    <div className="py-8 text-center bg-gray-800/30 rounded-lg">
+                      <i className="ri-file-text-line text-4xl text-gray-500 mb-2"></i>
+                      <p className="text-gray-400">Seçilen ay için rapor verisi bulunamadı.</p>
+                    </div>
+                  )}
+                  
+                  {reportData.length > 0 && (
+                    <div className="mt-6 flex justify-end">
+                      <button
+                        onClick={handleExportExcel}
+                        className="flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors"
+                      >
+                        <i className="ri-file-excel-2-line mr-2"></i>
+                        Excel Olarak İndir
+                      </button>
                     </div>
                   )}
                 </div>

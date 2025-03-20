@@ -9,7 +9,7 @@ interface CalendarProps {
 }
 
 export default function Calendar({ month, year, workLogs, onSelectDate }: CalendarProps) {
-  const [calendarDays, setCalendarDays] = useState<{ date: Date; hasLog: boolean; duration: number }[]>([]);
+  const [calendarDays, setCalendarDays] = useState<{ date: Date; hasLog: boolean; duration: number; hasFullDuration: boolean }[]>([]);
 
   // Ay adları (Türkçe)
   const monthNames = [
@@ -41,7 +41,8 @@ export default function Calendar({ month, year, workLogs, onSelectDate }: Calend
         days.unshift({ 
           date: prevMonthDay, 
           hasLog: false,
-          duration: 0
+          duration: 0,
+          hasFullDuration: false
         });
       }
       
@@ -59,10 +60,17 @@ export default function Calendar({ month, year, workLogs, onSelectDate }: Calend
           return logDate === dateString;
         });
         
+        // Günün toplam duration değerini hesapla
+        const totalDuration = logsOnThisDay.reduce((total, log) => total + parseFloat(String(log.duration)), 0);
+        
+        // Duration değeri tam 1.00 mi kontrol et
+        const hasFullDurationLog = logsOnThisDay.some(log => parseFloat(String(log.duration)) === 1.00);
+        
         days.push({
           date: currentDate,
           hasLog: logsOnThisDay.length > 0,
-          duration: logsOnThisDay.reduce((total, log) => total + parseFloat(String(log.duration)), 0)
+          duration: totalDuration,
+          hasFullDuration: hasFullDurationLog || totalDuration === 1.00
         });
       }
       
@@ -72,7 +80,8 @@ export default function Calendar({ month, year, workLogs, onSelectDate }: Calend
         days.push({ 
           date: new Date(year, month, i), 
           hasLog: false,
-          duration: 0
+          duration: 0,
+          hasFullDuration: false
         });
       }
       
@@ -137,16 +146,22 @@ export default function Calendar({ month, year, workLogs, onSelectDate }: Calend
               
               {day.hasLog && (
                 <div className="absolute inset-0 flex items-center justify-center opacity-10">
-                  <div className="w-full h-full bg-purple-500 rounded-md"></div>
+                  <div className={`w-full h-full rounded-md ${day.hasFullDuration ? 'bg-purple-500' : 'bg-yellow-500'}`}></div>
                 </div>
               )}
               
               {day.hasLog && (
                 <div className="relative z-10 flex items-center justify-center mt-1">
                   <div className="flex flex-col items-center text-xs">
-                    <i className="ri-checkbox-circle-fill text-purple-400 text-lg"></i>
+                    {day.hasFullDuration ? (
+                      <i className="ri-checkbox-circle-fill text-purple-400 text-lg"></i>
+                    ) : (
+                      <i className="ri-time-line text-yellow-400 text-lg"></i>
+                    )}
                     {day.duration > 0 && (
-                      <span className="text-white mt-1 font-medium">{day.duration}</span>
+                      <span className={`mt-1 font-medium ${day.hasFullDuration ? 'text-white' : 'text-yellow-300'}`}>
+                        {day.duration}
+                      </span>
                     )}
                   </div>
                 </div>
@@ -156,9 +171,15 @@ export default function Calendar({ month, year, workLogs, onSelectDate }: Calend
         })}
       </div>
       
-      <div className="mt-4 flex items-center text-xs text-gray-400">
-        <i className="ri-checkbox-circle-fill text-purple-400 mr-1"></i>
-        <span>İş kaydı yapılmış günler (tıklayarak yeni iş kaydı oluşturabilirsiniz)</span>
+      <div className="mt-4 flex items-center justify-between">
+        <div className="flex items-center text-xs text-gray-400">
+          <i className="ri-checkbox-circle-fill text-purple-400 mr-1"></i>
+          <span>1.00 birim tamamlanan günler</span>
+        </div>
+        <div className="flex items-center text-xs text-gray-400">
+          <i className="ri-time-line text-yellow-400 mr-1"></i>
+          <span>Kısmi çalışma günleri</span>
+        </div>
       </div>
     </div>
   );
