@@ -5,7 +5,6 @@ import { User } from '@/lib/types';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
-import { getUsers } from '@/lib/supabase';
 import { formatDate } from '@/lib/utils';
 
 export default function UsersPage() {
@@ -20,8 +19,22 @@ export default function UsersPage() {
   const loadUsers = async () => {
     try {
       setLoading(true);
-      const usersData = await getUsers();
-      setUsers(usersData);
+      console.log('Kullanıcılar yükleniyor...');
+      
+      // getUsers yerine direkt sorgu yap
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) {
+        console.error('Supabase sorgu hatası:', error);
+        throw error;
+      }
+      
+      console.log('Supabase sorgu sonucu:', data);
+      setUsers(data || []);
+      
     } catch (error) {
       console.error('Error loading users:', error);
       toast.error('Kullanıcılar yüklenirken bir hata oluştu.');

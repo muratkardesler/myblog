@@ -263,6 +263,8 @@ export async function updatePassword(newPassword: string) {
 
 export async function getUsers(): Promise<User[]> {
   try {
+    console.log('getUsers fonksiyonu çağrıldı');
+    
     const { data, error } = await supabase
       .from('users')
       .select('*')
@@ -270,9 +272,10 @@ export async function getUsers(): Promise<User[]> {
 
     if (error) {
       console.error('Kullanıcıları getirme hatası:', error);
-      return [];
+      throw error;
     }
 
+    console.log('Bulunan kullanıcı sayısı:', data?.length || 0);
     return data || [];
   } catch (error) {
     console.error('Kullanıcıları getirme hatası:', error);
