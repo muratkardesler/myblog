@@ -40,6 +40,7 @@ function ConfirmContent() {
         } else if (code) {
           // Magic link kodu varsa buraya girecek
           verifyResult = await supabase.auth.verifyOtp({
+            email: searchParams.get('email') || '',
             token: code,
             type: 'recovery'
           });
