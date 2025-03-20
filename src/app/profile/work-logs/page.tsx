@@ -10,14 +10,14 @@ import { useState, useEffect, ChangeEvent, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import toast from 'react-hot-toast';
-import { User } from '@/lib/types';
 import { getCurrentUser, refreshAuthSession } from '@/lib/supabase';
 import Link from 'next/link';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
+import Calendar from './components/Calendar';
 
 // İş kaydı tipi
-interface WorkLog {
+export interface WorkLog {
   id: string;
   user_id: string;
   date: string;
@@ -38,7 +38,6 @@ export default function WorkLogsPage() {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [authChecked, setAuthChecked] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   // İş kaydı form state
@@ -69,9 +68,9 @@ export default function WorkLogsPage() {
     try {
       setLoadingLogs(true);
       
-      // Ay başlangıç ve bitiş tarihlerini hesapla
-      const startDate = new Date(filterYear, filterMonth - 1, 1).toISOString().split('T')[0];
-      const endDate = new Date(filterYear, filterMonth, 0).toISOString().split('T')[0];
+      // Ay başlangıç ve bitiş tarihlerini hesapla (YYYY-MM-DD formatında)
+      const startDate = formatDateToYYYYMMDD(new Date(filterYear, filterMonth - 1, 1));
+      const endDate = formatDateToYYYYMMDD(new Date(filterYear, filterMonth, 0));
       
       const { data, error } = await supabase
         .from('work_logs')
@@ -260,10 +259,18 @@ export default function WorkLogsPage() {
 
   // Mevcut ay için toplam çalışma bilgisini hesapla
   const calculateMonthlyStats = () => {
-    if (!workLogs.length) return { total: 0, percentage: 0, completedDays: 0, workDays: 0 };
+    if (!workLogs.length) return { 
+      totalHours: 0, 
+      percentage: 0, 
+      workDays: 0, 
+      totalDays: 0,
+      uniqueDays: 0
+    };
     
-    // İş günü sayısı (ayın iş günleri)
+    // Ayın gün sayısı
     const daysInMonth = new Date(filterYear, filterMonth, 0).getDate();
+    
+    // İş günü sayısı (hafta içi günler)
     let workDays = 0;
     
     // Ayın her günü için kontrol et
@@ -277,21 +284,32 @@ export default function WorkLogsPage() {
     }
     
     // Toplam çalışma süresi
-    const totalDuration = workLogs.reduce((sum, log) => sum + parseFloat(String(log.duration)), 0);
+    const totalHours = workLogs.reduce((sum, log) => sum + parseFloat(String(log.duration)), 0);
     
-    // Çalışma günü sayısı (benzersiz günler)
-    const uniqueDates = new Set(workLogs.map(log => log.date));
-    const completedDays = uniqueDates.size;
+    // Kayıt yapılan benzersiz günler - tarih formatını düzgün karşılaştır
+    const uniqueDatesSet = new Set(workLogs.map(log => {
+      return log.date.includes('T') ? log.date.split('T')[0] : log.date;
+    }));
+    const uniqueDays = uniqueDatesSet.size;
     
-    // Yüzde hesapla
-    const percentage = workDays > 0 ? (completedDays / workDays) * 100 : 0;
+    // Yüzde hesapla (iş günü tamamlama yüzdesi)
+    const percentage = workDays > 0 ? (uniqueDays / workDays) * 100 : 0;
     
     return {
-      total: totalDuration,
-      completedDays,
+      totalHours,
       workDays,
+      uniqueDays,
+      totalDays: daysInMonth,
       percentage
     };
+  };
+
+  // Tarih formatını YYYY-MM-DD şeklinde döndüren yardımcı fonksiyon
+  const formatDateToYYYYMMDD = (date: Date): string => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   };
 
   const stats = calculateMonthlyStats();
@@ -303,7 +321,7 @@ export default function WorkLogsPage() {
   ];
 
   // Oturum kontrolü yapılana kadar yükleniyor göster
-  if (!authChecked && loading) {
+  if (loading) {
     return (
       <>
         <Header mobileMenuOpen={mobileMenuOpen} setMobileMenuOpen={setMobileMenuOpen} />
@@ -320,97 +338,114 @@ export default function WorkLogsPage() {
   return (
     <>
       <Header mobileMenuOpen={mobileMenuOpen} setMobileMenuOpen={setMobileMenuOpen} />
-      <main className="min-h-screen bg-gray-900 pt-20 pb-16">
-        <div className="max-w-6xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-            {/* Sol sidebar - Profil Navigasyonu */}
-            <div className="lg:col-span-3">
-              <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-xl p-4">
-                <div className="mb-4 pb-4 border-b border-gray-700/50">
-                  <h3 className="text-lg font-medium text-white">Profil Menüsü</h3>
-                </div>
-                <nav className="space-y-2">
-                  <Link 
-                    href="/profile" 
-                    className="flex items-center px-3 py-2 text-gray-300 hover:bg-gray-700/50 hover:text-white rounded-lg transition-colors"
-                  >
+      <main className="min-h-screen bg-gradient-to-b from-gray-900 to-gray-800">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
+            <div className="md:col-span-3">
+              <div className="bg-gray-700/30 border border-gray-600/30 rounded-xl p-5 sticky top-24">
+                <h3 className="text-lg font-medium text-white mb-4">Profil Menüsü</h3>
+                <nav className="space-y-1">
+                  <Link href="/profile" className="flex items-center px-3 py-2 text-gray-300 hover:bg-gray-700/30 hover:text-white rounded-md">
+                    <i className="ri-user-line mr-3 text-gray-400"></i>
                     <span>Profil Bilgilerim</span>
                   </Link>
-                  <Link 
-                    href="/profile/work-logs" 
-                    className="flex items-center px-3 py-2 text-white bg-purple-500/20 rounded-lg"
-                  >
+                  <Link href="/profile/work-logs" className="flex items-center px-3 py-2 text-white bg-gray-800/50 rounded-md">
+                    <i className="ri-time-line mr-3 text-purple-400"></i>
                     <span>İş Takibi</span>
                   </Link>
-                  <Link 
-                    href="/profile/reports" 
-                    className="flex items-center px-3 py-2 text-gray-300 hover:bg-gray-700/50 hover:text-white rounded-lg transition-colors"
-                  >
+                  <Link href="/profile/reports" className="flex items-center px-3 py-2 text-gray-300 hover:bg-gray-700/30 hover:text-white rounded-md">
+                    <i className="ri-bar-chart-2-line mr-3 text-gray-400"></i>
                     <span>Raporlar</span>
                   </Link>
                 </nav>
               </div>
             </div>
-
-            {/* Sağ içerik - İş takip */}
-            <div className="lg:col-span-9">
-              <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-xl p-6">
-                <h1 className="text-2xl font-bold text-white mb-6">İş Takip Sistemi</h1>
-                
-                {/* Aylık istatistikler */}
-                <div className="bg-gray-700/30 border border-gray-600/30 rounded-xl p-5 mb-8">
-                  <div className="flex flex-wrap items-center justify-between mb-4">
-                    <h2 className="text-lg font-medium text-white">Aylık İstatistikler</h2>
+            
+            <div className="md:col-span-9">
+              <div className="mb-6">
+                <h1 className="text-3xl font-bold text-white mb-2">İş Takip Sistemi</h1>
+                <p className="text-gray-400">Çalışma saatlerinizi ve projelerinizi takip edin.</p>
+              </div>
+              
+              <div className="space-y-8">
+                {/* Ay/Yıl seçici */}
+                <div className="flex flex-wrap gap-4 justify-between items-center bg-gray-700/30 border border-gray-600/30 rounded-xl p-5">
+                  <h2 className="text-lg font-medium text-white">Aylık İstatistikler</h2>
+                  
+                  <div className="flex gap-2">
+                    <select 
+                      value={filterMonth}
+                      onChange={(e) => handleMonthYearChange(parseInt(e.target.value), filterYear)}
+                      className="bg-gray-800 border border-gray-700 text-white rounded-lg px-3 py-2"
+                    >
+                      {Array.from({ length: 12 }, (_, i) => i + 1).map((month) => (
+                        <option key={month} value={month}>
+                          {new Date(0, month - 1).toLocaleString('tr-TR', { month: 'long' })}
+                        </option>
+                      ))}
+                    </select>
                     
-                    {/* Ay-Yıl seçici */}
-                    <div className="flex space-x-2">
-                      <select 
-                        className="bg-gray-700 text-white border border-gray-600 rounded-lg px-3 py-2 text-sm"
-                        value={filterMonth}
-                        onChange={(e) => handleMonthYearChange(parseInt(e.target.value), filterYear)}
-                      >
-                        {months.map((month, index) => (
-                          <option key={index} value={index + 1}>{month}</option>
-                        ))}
-                      </select>
+                    <select 
+                      value={filterYear}
+                      onChange={(e) => handleMonthYearChange(filterMonth, parseInt(e.target.value))}
+                      className="bg-gray-800 border border-gray-700 text-white rounded-lg px-3 py-2"
+                    >
+                      {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i).map((year) => (
+                        <option key={year} value={year}>{year}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                
+                {/* İstatistikler */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="bg-gray-700/30 border border-gray-600/30 rounded-xl p-5">
+                    <div className="flex flex-col space-y-4">
+                      <div className="bg-gray-800/50 p-4 rounded-lg border border-gray-700/50">
+                        <p className="text-sm text-gray-400 mb-1">Toplam Çalışma</p>
+                        <p className="text-2xl font-bold text-white">{stats.totalHours} <span className="text-sm text-gray-400">birim</span></p>
+                      </div>
                       
-                      <select 
-                        className="bg-gray-700 text-white border border-gray-600 rounded-lg px-3 py-2 text-sm"
-                        value={filterYear}
-                        onChange={(e) => handleMonthYearChange(filterMonth, parseInt(e.target.value))}
-                      >
-                        {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i).map(year => (
-                          <option key={year} value={year}>{year}</option>
-                        ))}
-                      </select>
+                      <div className="bg-gray-800/50 p-4 rounded-lg border border-gray-700/50">
+                        <p className="text-sm text-gray-400 mb-1">Çalışma Günleri</p>
+                        <p className="text-2xl font-bold text-white">{stats.uniqueDays} <span className="text-sm text-gray-400">/ {stats.workDays} gün</span></p>
+                      </div>
+                      
+                      <div className="bg-gray-800/50 p-4 rounded-lg border border-gray-700/50">
+                        <p className="text-sm text-gray-400 mb-1">Tamamlanma Oranı</p>
+                        <p className="text-2xl font-bold text-white">{stats.percentage.toFixed(0)}%</p>
+                        <div className="w-full bg-gray-700 rounded-full h-2.5 mt-2">
+                          <div className="bg-purple-500 h-2.5 rounded-full" style={{ width: `${stats.percentage}%` }}></div>
+                        </div>
+                      </div>
                     </div>
                   </div>
                   
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="bg-gray-800/50 p-4 rounded-lg border border-gray-700/50">
-                      <p className="text-sm text-gray-400 mb-1">Toplam Çalışma</p>
-                      <p className="text-2xl font-bold text-white">{stats.total.toFixed(2)} <span className="text-sm text-gray-400">birim</span></p>
-                    </div>
-                    
-                    <div className="bg-gray-800/50 p-4 rounded-lg border border-gray-700/50">
-                      <p className="text-sm text-gray-400 mb-1">Çalışma Günleri</p>
-                      <p className="text-2xl font-bold text-white">{stats.completedDays} <span className="text-sm text-gray-400">/ {stats.workDays} gün</span></p>
-                    </div>
-                    
-                    <div className="bg-gray-800/50 p-4 rounded-lg border border-gray-700/50">
-                      <p className="text-sm text-gray-400 mb-1">Tamamlanma Oranı</p>
-                      <p className="text-2xl font-bold text-white">{stats.percentage.toFixed(0)}%</p>
-                      <div className="w-full bg-gray-700 rounded-full h-2.5 mt-2">
-                        <div className="bg-purple-500 h-2.5 rounded-full" style={{ width: `${stats.percentage}%` }}></div>
-                      </div>
-                    </div>
+                  {/* Takvim Komponenti */}
+                  <div className="sm:col-span-2">
+                    <Calendar 
+                      month={filterMonth} 
+                      year={filterYear} 
+                      workLogs={workLogs}
+                      onSelectDate={(date) => {
+                        setFormData({
+                          ...formData,
+                          date
+                        });
+                        // Formun olduğu bölüme scroll yap
+                        document.getElementById('new-worklog-form')?.scrollIntoView({ 
+                          behavior: 'smooth',
+                          block: 'start'
+                        });
+                      }}
+                    />
                   </div>
                 </div>
                 
                 {/* Form ve liste */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                   {/* İş kaydı formu */}
-                  <div className="bg-gray-700/30 border border-gray-600/30 rounded-xl p-5">
+                  <div className="bg-gray-700/30 border border-gray-600/30 rounded-xl p-5" id="new-worklog-form">
                     <h2 className="text-lg font-medium text-white mb-4">Yeni İş Kaydı Ekle</h2>
                     
                     <form onSubmit={handleSubmit} className="space-y-4">
