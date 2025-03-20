@@ -1,3 +1,10 @@
+import {
+  createClientComponentClient,
+  createServerComponentClient
+} from '@supabase/auth-helpers-nextjs';
+import { cookies } from 'next/headers';
+import { type Database } from './database.types';
+import { formatDate } from './utils';
 import { createClient } from '@supabase/supabase-js';
 import { Post, Category, PostLike, User } from './types';
 
@@ -147,98 +154,64 @@ export async function registerUser(email: string, password: string, full_name: s
   }
 }
 
-export async function loginUser(email: string, password: string) {
-  const maxRetries = 3;
-  let retryCount = 0;
-  let backoffTime = 1000; // 1 saniye
-  
-  // Retry işlemi ile giriş yap
-  while(retryCount < maxRetries) {
-    try {
-      // Her denemede önceki oturumları temizle
-      if (retryCount > 0) {
-        await supabase.auth.signOut();
-        console.log(`Giriş yeniden deneniyor (${retryCount}/${maxRetries})...`);
-        await new Promise(resolve => setTimeout(resolve, backoffTime));
-      }
-      
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+export const loginUser = async (email: string, password: string) => {
+  try {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
 
-      if (error) {
-        // Rate limit hatası
-        if (error.status === 429) {
-          retryCount++;
-          backoffTime *= 2; // Her denemede bekleme süresini ikiye katla
-          console.warn(`Rate limit hatası, ${backoffTime/1000} saniye bekleyip tekrar deneniyor...`);
-          continue; // Döngüyü devam ettir
-        }
-        
-        // Kimlik bilgileri hatası
-        if (error.message?.includes('Invalid login credentials')) {
-          return { 
-            success: false, 
-            error: { 
-              message: 'E-posta adresi veya şifre hatalı. Lütfen bilgilerinizi kontrol edin.' 
-            } 
-          };
-        }
-        
-        // Diğer hatalar
-        return { 
-          success: false, 
-          error: { 
-            message: `Giriş hatası: ${error.message}` 
-          } 
-        };
-      }
-
-      // Başarılı giriş - son giriş zamanını güncelle
-      if (data?.user) {
-        await supabase
-          .from('users')
-          .update({
-            last_login: new Date().toISOString(),
-          })
-          .eq('id', data.user.id)
-          .then(result => {
-            if (result.error) {
-              console.warn('Son giriş zamanı güncellenemedi:', result.error);
-            }
-          });
-      }
-
-      return { success: true, user: data?.user || null };
-    } catch (error: unknown) {
-      retryCount++;
-      
-      if (retryCount >= maxRetries) {
-        console.error('Maksimum deneme sayısına ulaşıldı:', error);
-        return { 
-          success: false, 
-          error: { 
-            message: 'Giriş yapılamadı. Lütfen daha sonra tekrar deneyin.' 
-          } 
-        };
-      }
-      
-      // Hata türüne göre bekleme süresi ayarla
-      backoffTime *= 2;
-      console.warn(`Hata oluştu, ${backoffTime/1000} saniye bekleyip tekrar deneniyor...`, error);
-      await new Promise(resolve => setTimeout(resolve, backoffTime));
+    if (error) {
+      return { success: false, error };
     }
+
+    if (data?.user) {
+      // Kullanıcının aktif olup olmadığını kontrol et
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('is_active')
+        .eq('id', data.user.id)
+        .single();
+
+      if (userError) {
+        console.error('Kullanıcı durumu kontrol edilirken hata:', userError);
+        return { success: false, error: userError };
+      }
+
+      // Kullanıcı pasif ise oturumu sonlandır ve hata mesajı döndür
+      if (userData && userData.is_active === false) {
+        // Oturumu sonlandır
+        await supabase.auth.signOut();
+        
+        return { 
+          success: false, 
+          error: { 
+            message: 'Hesabınız yönetici tarafından engellenmiştir. İletişim için site yöneticisiyle görüşün.', 
+            code: 'ACCOUNT_DISABLED' 
+          } 
+        };
+      }
+
+      // Son giriş zamanını güncelle (sadece aktif kullanıcılar için)
+      const { error: updateError } = await supabase
+        .from('users')
+        .update({ last_login: new Date().toISOString() })
+        .eq('id', data.user.id);
+
+      if (updateError) {
+        console.error('Son giriş zamanı güncellenirken hata:', updateError);
+        // Bu hata kritik değil, kullanıcıyı yine de giriş yaptıralım
+      }
+
+      return { success: true, data };
+    }
+
+    return { success: false, error: { message: 'Bilinmeyen bir hata oluştu.' } };
+  } catch (error) {
+    console.error('Login error:', error);
+    return { success: false, error: error instanceof Error ? error : new Error('Bilinmeyen bir hata oluştu.') };
   }
-  
-  // Bu noktaya asla ulaşılmamalı, ama TypeScript için gerekli
-  return { 
-    success: false, 
-    error: { 
-      message: 'Beklenmeyen bir hata oluştu. Lütfen daha sonra tekrar deneyin.' 
-    } 
-  };
-}
+};
 
 export async function logoutUser() {
   try {
@@ -596,75 +569,88 @@ export async function checkIfUserLikedPost(postId: string, ipAddress: string, us
   return !!data;
 }
 
-export async function likePost(postId: string, ipAddress: string): Promise<boolean> {
-  // Önce kullanıcının daha önce beğenip beğenmediğini kontrol et
-  const alreadyLiked = await checkIfUserLikedPost(postId, ipAddress, '');
-  
-  if (alreadyLiked) {
-    // Kullanıcı zaten beğenmiş, beğeniyi kaldır
-    const { error } = await supabase
+export async function likePost(postId: string, ipAddress: string) {
+  try {
+    // Daha önce beğeni yapılmış mı kontrol et
+    const { data: existingLike, error: checkError } = await supabase
       .from('post_likes')
-      .delete()
+      .select('id')
       .eq('post_id', postId)
-      .eq('ip_address', ipAddress);
+      .eq('ip_address', ipAddress)
+      .maybeSingle();
 
-    if (error) {
-      console.error('Error removing like:', error);
-      return false;
+    if (checkError) {
+      console.error('Beğeni kontrolü hatası:', checkError);
+      return { success: false, error: checkError };
     }
-    
-    return false; // Beğeni kaldırıldı
-  } else {
+
+    // Eğer daha önce beğeni yapılmışsa, beğeniyi kaldır
+    if (existingLike) {
+      const { error: deleteLikeError } = await supabase
+        .from('post_likes')
+        .delete()
+        .eq('id', existingLike.id);
+
+      if (deleteLikeError) {
+        console.error('Beğeni kaldırma hatası:', deleteLikeError);
+        return { success: false, error: deleteLikeError };
+      }
+
+      return { success: true, action: 'unliked' };
+    }
+
     // Yeni beğeni ekle
-    const { error } = await supabase
+    const { data: newLike, error: insertError } = await supabase
       .from('post_likes')
       .insert({
         post_id: postId,
-        ip_address: ipAddress,
-        user_agent: navigator?.userAgent || 'unknown'
-      });
+        ip_address: ipAddress
+      })
+      .select('id')
+      .single();
 
-    if (error) {
-      console.error('Error adding like:', error);
-      return false;
+    if (insertError) {
+      console.error('Beğeni ekleme hatası:', insertError);
+      return { success: false, error: insertError };
     }
-    
-    return true; // Beğeni eklendi
+
+    return { success: true, action: 'liked', data: newLike };
+  } catch (error) {
+    console.error('Beğeni işlemi hatası:', error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error : new Error('Beğeni işlemi sırasında bir hata oluştu.') 
+    };
   }
 }
 
+// Mevcut oturumu ve kullanıcı bilgilerini döndüren fonksiyon
 export async function getCurrentUser() {
   try {
-    const { data: { session }, error } = await supabase.auth.getSession();
+    // Oturumu kontrol et
+    const { data: { session } } = await supabase.auth.getSession();
     
-    if (error) {
-      console.error('Oturum kontrol hatası:', error);
-      return { success: false, user: null, error };
-    }
-    
+    // Oturum yoksa null döndür
     if (!session) {
-      return { success: false, user: null };
+      console.log("Oturum bulunamadı");
+      return { success: false, user: null, profile: null };
     }
-    
-    // Kullanıcı profil bilgilerini al
-    const { data: profile, error: profileError } = await supabase
+
+    // Oturum varsa kullanıcı profilini getir
+    const { data: profile, error } = await supabase
       .from('users')
       .select('*')
       .eq('id', session.user.id)
       .single();
-    
-    if (profileError) {
-      console.error('Profil bilgisi alma hatası:', profileError);
+
+    if (error) {
+      console.error("Profil bilgisi alınamadı:", error);
       return { success: true, user: session.user, profile: null };
     }
-    
-    return { 
-      success: true, 
-      user: session.user,
-      profile
-    };
+
+    return { success: true, user: session.user, profile };
   } catch (error) {
-    console.error('Kullanıcı bilgisi alma hatası:', error);
-    return { success: false, user: null, error };
+    console.error("Oturum kontrolü hatası:", error);
+    return { success: false, user: null, profile: null };
   }
 } 

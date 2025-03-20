@@ -1,8 +1,10 @@
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { User } from '@/lib/types';
+import { getCurrentUser } from '@/lib/supabase';
+import toast from 'react-hot-toast';
 
 interface HeaderProps {
   mobileMenuOpen: boolean;
@@ -10,73 +12,229 @@ interface HeaderProps {
 }
 
 export default function Header({ mobileMenuOpen, setMobileMenuOpen }: HeaderProps) {
+  const pathname = usePathname();
   const router = useRouter();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [activeRoute, setActiveRoute] = useState('/');
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const supabase = createClientComponentClient();
 
   useEffect(() => {
     // Komponent mount durumunu takip et
     let isMounted = true;
-    let debounceTimer: NodeJS.Timeout | null = null;
-
+    
+    // Oturum kontrolü için interval süresini uzatalım (10sn'den 30sn'ye)
+    const authCheckInterval = setInterval(checkAuth, 30000);
+    
     // Otomatik kimlik doğrulama kontrolü fonksiyonu
-    const checkAuth = async () => {
+    async function checkAuth() {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
+        // Gerçekten gerekli olmadıkça log yazdırmayalım
+        // console.log("Header oturum kontrolü başladı");
+
+        // getCurrentUser fonksiyonunu kullanarak daha güvenilir bir kontrol yap
+        const { success, profile } = await getCurrentUser();
         
-        // Debounce işlemiyle durumu güncelleme
-        if (debounceTimer) clearTimeout(debounceTimer);
+        // console.log("Header oturum durumu:", success ? "Oturum var" : "Oturum yok");
         
-        debounceTimer = setTimeout(() => {
-          if (isMounted) {
-            setIsAuthenticated(!!session);
-            
-            if (session?.user) {
-              // Kullanıcı bilgilerini al
-              supabase
-                .from('users')
-                .select('*')
-                .eq('id', session.user.id)
-                .single()
-                .then(({ data }) => {
-                  if (isMounted && data) {
-                    setUser(data as User);
-                  }
-                  setLoading(false);
-                });
-            } else {
-              setUser(null);
-              setLoading(false);
-            }
+        if (isMounted) {
+          // Durumda bir değişiklik varsa state'i güncelle
+          if (isAuthenticated !== success) {
+            setIsAuthenticated(success);
           }
-        }, 200); // 200ms gecikme ile güncelle, art arda istekleri önle
+          
+          if (success && profile) {
+            // Kullanıcı bilgisini güncelle
+            setUser(profile as User);
+          } else if (user !== null) {
+            setUser(null);
+          }
+        }
       } catch (error) {
         console.error('Oturum kontrolü hatası:', error);
-        if (isMounted) {
+        if (isMounted && isAuthenticated) {
           setIsAuthenticated(false);
           setUser(null);
-          setLoading(false);
         }
       }
-    };
+    }
 
+    // İlk yüklenmede bir kez kontrol et ve sonra intervale bırak
     checkAuth();
     
-    // Event listener için referans
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
+    // Oturum değişikliklerini dinle
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      // Gerçekten gerekli olmadıkça log yazdırmayalım
+      // console.log("Oturum durumu değişti, event:", event);
+      
+      // Sadece kullanıcı gerçekten yeni giriş yaptığında bildirimi göster
+      if (event === 'SIGNED_IN' && session?.user?.aud === 'authenticated') {
+        // Sayfayı yeniden yüklediyse veya sayfa ilk yüklendiğinde bildirimi gösterme
+        const lastSignInTime = window.localStorage.getItem('last_sign_in_time');
+        const currentTime = new Date().getTime();
+        
+        // Son giriş zamanı kontrolü - 10 sn içinde tekrar bildirim gösterme
+        if (!lastSignInTime || (currentTime - parseInt(lastSignInTime)) > 10000) {
+          // Son giriş zamanını kaydet
+          window.localStorage.setItem('last_sign_in_time', currentTime.toString());
+          
+          toast.custom(
+            (t) => (
+              <div
+                className={`${
+                  t.visible ? 'animate-enter' : 'animate-leave'
+                } max-w-md w-full bg-gradient-to-br from-green-900/90 to-green-800/90 backdrop-blur-md shadow-lg rounded-xl pointer-events-auto flex border border-green-500/30`}
+              >
+                <div className="flex-1 w-0 p-4">
+                  <div className="flex items-start">
+                    <div className="flex-shrink-0 pt-0.5">
+                      <div className="h-10 w-10 rounded-full bg-green-500/10 flex items-center justify-center">
+                        <i className="ri-check-line text-xl text-green-400"></i>
+                      </div>
+                    </div>
+                    <div className="ml-3 flex-1">
+                      <p className="text-sm font-medium text-white">
+                        Giriş Başarılı
+                      </p>
+                      <p className="mt-1 text-sm text-gray-300">
+                        Hoş geldiniz! Başarıyla giriş yaptınız.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex border-l border-green-500/30">
+                  <button
+                    onClick={() => toast.dismiss(t.id)}
+                    className="w-full border border-transparent rounded-none rounded-r-xl p-4 flex items-center justify-center text-sm font-medium text-green-300 hover:text-white focus:outline-none"
+                  >
+                    <i className="ri-close-line text-lg"></i>
+                  </button>
+                </div>
+              </div>
+            ),
+            { duration: 3000 }
+          );
+        }
+      }
+      
       checkAuth();
     });
 
     // Temizleme fonksiyonu
     return () => {
       isMounted = false;
-      if (debounceTimer) clearTimeout(debounceTimer);
+      clearInterval(authCheckInterval);
       subscription.unsubscribe();
     };
   }, [supabase]);
+
+  const handleLogout = async () => {
+    try {
+      setIsLoggingOut(true);
+      console.log("Çıkış işlemi başlatıldı");
+      
+      // Önce local storage'daki verileri temizleyelim
+      localStorage.removeItem('supabase.auth.token');
+      
+      // Supabase oturumunu sonlandır
+      const { error } = await supabase.auth.signOut();
+      
+      if (error) {
+        throw error;
+      }
+
+      // Çıkış başarılı olduğunda
+      console.log("Çıkış başarılı");
+      
+      // Modern bildirim
+      toast.custom(
+        (t) => (
+          <div
+            className={`${
+              t.visible ? 'animate-enter' : 'animate-leave'
+            } max-w-md w-full bg-gradient-to-br from-blue-900/90 to-indigo-800/90 backdrop-blur-md shadow-lg rounded-xl pointer-events-auto flex border border-blue-500/30`}
+          >
+            <div className="flex-1 w-0 p-4">
+              <div className="flex items-start">
+                <div className="flex-shrink-0 pt-0.5">
+                  <div className="h-10 w-10 rounded-full bg-blue-500/10 flex items-center justify-center">
+                    <i className="ri-logout-box-line text-xl text-blue-400"></i>
+                  </div>
+                </div>
+                <div className="ml-3 flex-1">
+                  <p className="text-sm font-medium text-white">
+                    Çıkış Başarılı
+                  </p>
+                  <p className="mt-1 text-sm text-gray-300">
+                    Oturumunuz güvenli bir şekilde sonlandırıldı.
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div className="flex border-l border-blue-500/30">
+              <button
+                onClick={() => toast.dismiss(t.id)}
+                className="w-full border border-transparent rounded-none rounded-r-xl p-4 flex items-center justify-center text-sm font-medium text-blue-300 hover:text-white focus:outline-none"
+              >
+                <i className="ri-close-line text-lg"></i>
+              </button>
+            </div>
+          </div>
+        ),
+        { duration: 3000 }
+      );
+      
+      // Durumu güncelle
+      setIsAuthenticated(false);
+      setUser(null);
+      
+      // Sayfayı yenile ve anasayfaya yönlendir
+      router.refresh();
+      router.push('/');
+    } catch (error) {
+      console.error('Çıkış hatası:', error);
+      
+      // Hata bildirimi
+      toast.custom(
+        (t) => (
+          <div
+            className={`${
+              t.visible ? 'animate-enter' : 'animate-leave'
+            } max-w-md w-full bg-gradient-to-br from-red-900/90 to-rose-800/90 backdrop-blur-md shadow-lg rounded-xl pointer-events-auto flex border border-red-500/30`}
+          >
+            <div className="flex-1 w-0 p-4">
+              <div className="flex items-start">
+                <div className="flex-shrink-0 pt-0.5">
+                  <div className="h-10 w-10 rounded-full bg-red-500/10 flex items-center justify-center">
+                    <i className="ri-error-warning-line text-xl text-red-400"></i>
+                  </div>
+                </div>
+                <div className="ml-3 flex-1">
+                  <p className="text-sm font-medium text-white">
+                    Hata Oluştu
+                  </p>
+                  <p className="mt-1 text-sm text-gray-300">
+                    Çıkış yapılırken bir sorun oluştu. Lütfen tekrar deneyin.
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div className="flex border-l border-red-500/30">
+              <button
+                onClick={() => toast.dismiss(t.id)}
+                className="w-full border border-transparent rounded-none rounded-r-xl p-4 flex items-center justify-center text-sm font-medium text-red-300 hover:text-white focus:outline-none"
+              >
+                <i className="ri-close-line text-lg"></i>
+              </button>
+            </div>
+          </div>
+        ),
+        { duration: 4000 }
+      );
+    } finally {
+      setIsLoggingOut(false);
+    }
+  };
 
   return (
     <>
@@ -92,14 +250,14 @@ export default function Header({ mobileMenuOpen, setMobileMenuOpen }: HeaderProp
               </span>
             </Link>
             <nav className="hidden md:flex space-x-8">
-              <Link href="/" className="text-gray-300 hover:text-primary transition-colors">Anasayfa</Link>
-              <Link href="/about" className="text-gray-300 hover:text-primary transition-colors">Hakkımda</Link>
-              <Link href="/blog" className="text-gray-300 hover:text-primary transition-colors">Blog</Link>
-              <Link href="/contact" className="text-gray-300 hover:text-primary transition-colors">İletişim</Link>
+              <Link href="/" className={`${pathname === '/' ? 'text-purple-400' : 'text-gray-300'} hover:text-primary transition-colors`}>Anasayfa</Link>
+              <Link href="/about" className={`${pathname === '/about' ? 'text-purple-400' : 'text-gray-300'} hover:text-primary transition-colors`}>Hakkımda</Link>
+              <Link href="/blog" className={`${pathname === '/blog' ? 'text-purple-400' : 'text-gray-300'} hover:text-primary transition-colors`}>Blog</Link>
+              <Link href="/contact" className={`${pathname === '/contact' ? 'text-purple-400' : 'text-gray-300'} hover:text-primary transition-colors`}>İletişim</Link>
             </nav>
             
             <div className="hidden md:flex items-center space-x-4">
-              {isAuthenticated ? (
+              {isAuthenticated && user ? (
                 <div className="flex items-center space-x-3">
                   <div className="text-gray-300">
                     <span className="text-purple-400 font-medium">Hoş geldiniz, </span> 
@@ -107,23 +265,42 @@ export default function Header({ mobileMenuOpen, setMobileMenuOpen }: HeaderProp
                   </div>
                   <Link 
                     href="/profile" 
-                    className="bg-purple-500/10 text-purple-400 border border-purple-500/20 px-4 py-1.5 rounded-xl hover:bg-purple-500/20 transition-colors"
+                    className={`${pathname === '/profile' ? 'bg-purple-500/20' : 'bg-purple-500/10'} text-purple-400 border border-purple-500/20 px-4 py-1.5 rounded-xl hover:bg-purple-500/20 transition-colors`}
                   >
                     <i className="ri-user-line mr-2"></i>
                     Profilim
                   </Link>
+                  <button
+                    onClick={handleLogout}
+                    disabled={isLoggingOut}
+                    className="bg-red-500/10 text-red-400 border border-red-500/20 px-4 py-1.5 rounded-xl hover:bg-red-500/20 transition-colors disabled:opacity-70"
+                  >
+                    {isLoggingOut ? (
+                      <span className="flex items-center">
+                        <i className="ri-loader-4-line animate-spin mr-1"></i>
+                        Çıkış
+                      </span>
+                    ) : (
+                      <span className="flex items-center">
+                        <i className="ri-logout-box-line mr-2"></i>
+                        Çıkış
+                      </span>
+                    )}
+                  </button>
                 </div>
               ) : (
                 <>
                   <Link 
                     href="/auth/login" 
-                    className="text-gray-300 hover:text-white transition-colors"
+                    className={`${pathname === '/auth/login' ? 'text-purple-400' : 'text-gray-300'} hover:text-white transition-colors`}
+                    prefetch={false}
                   >
                     Giriş
                   </Link>
                   <Link 
                     href="/auth/register" 
-                    className="bg-purple-500/10 text-purple-400 border border-purple-500/20 px-4 py-1.5 rounded-xl hover:bg-purple-500/20 transition-colors"
+                    className={`${pathname === '/auth/register' ? 'bg-purple-500/20' : 'bg-purple-500/10'} text-purple-400 border border-purple-500/20 px-4 py-1.5 rounded-xl hover:bg-purple-500/20 transition-colors`}
+                    prefetch={false}
                   >
                     Üye Ol
                   </Link>
@@ -142,12 +319,12 @@ export default function Header({ mobileMenuOpen, setMobileMenuOpen }: HeaderProp
       </header>
       <div className={`fixed inset-0 bg-gray-900 z-40 md:hidden pt-16 ${mobileMenuOpen ? '' : 'hidden'}`}>
         <nav className="flex flex-col space-y-4 p-4">
-          <Link href="/" className="text-gray-300 hover:text-primary transition-colors py-2">Anasayfa</Link>
-          <Link href="/about" className="text-gray-300 hover:text-primary transition-colors py-2">Hakkımda</Link>
-          <Link href="/blog" className="text-gray-300 hover:text-primary transition-colors py-2">Blog</Link>
-          <Link href="/contact" className="text-gray-300 hover:text-primary transition-colors py-2">İletişim</Link>
+          <Link href="/" className={`${pathname === '/' ? 'text-purple-400' : 'text-gray-300'} hover:text-primary transition-colors py-2`}>Anasayfa</Link>
+          <Link href="/about" className={`${pathname === '/about' ? 'text-purple-400' : 'text-gray-300'} hover:text-primary transition-colors py-2`}>Hakkımda</Link>
+          <Link href="/blog" className={`${pathname === '/blog' ? 'text-purple-400' : 'text-gray-300'} hover:text-primary transition-colors py-2`}>Blog</Link>
+          <Link href="/contact" className={`${pathname === '/contact' ? 'text-purple-400' : 'text-gray-300'} hover:text-primary transition-colors py-2`}>İletişim</Link>
           
-          {isAuthenticated ? (
+          {isAuthenticated && user ? (
             <>
               <div className="text-gray-300 py-2">
                 <span className="text-purple-400 font-medium">Hoş geldiniz, </span> 
@@ -155,23 +332,42 @@ export default function Header({ mobileMenuOpen, setMobileMenuOpen }: HeaderProp
               </div>
               <Link 
                 href="/profile" 
-                className="text-purple-400 hover:text-primary transition-colors py-2"
+                className={`${pathname === '/profile' ? 'text-purple-500' : 'text-purple-400'} hover:text-primary transition-colors py-2`}
               >
                 <i className="ri-user-line mr-2"></i>
                 Profilim
               </Link>
+              <button
+                onClick={handleLogout}
+                disabled={isLoggingOut}
+                className="text-red-400 hover:text-red-300 transition-colors py-2 text-left disabled:opacity-70"
+              >
+                {isLoggingOut ? (
+                  <span className="flex items-center">
+                    <i className="ri-loader-4-line animate-spin mr-1"></i>
+                    Çıkış yapılıyor...
+                  </span>
+                ) : (
+                  <span className="flex items-center">
+                    <i className="ri-logout-box-line mr-2"></i>
+                    Çıkış Yap
+                  </span>
+                )}
+              </button>
             </>
           ) : (
             <>
               <Link 
                 href="/auth/login" 
-                className="text-gray-300 hover:text-primary transition-colors py-2"
+                className={`${pathname === '/auth/login' ? 'text-purple-400' : 'text-gray-300'} hover:text-primary transition-colors py-2`}
+                prefetch={false}
               >
                 Giriş
               </Link>
               <Link 
                 href="/auth/register" 
-                className="text-purple-400 hover:text-primary transition-colors py-2"
+                className={`${pathname === '/auth/register' ? 'text-purple-500' : 'text-purple-400'} hover:text-primary transition-colors py-2`}
+                prefetch={false}
               >
                 Üye Ol
               </Link>

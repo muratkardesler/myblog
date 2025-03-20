@@ -5,8 +5,13 @@ import type { NextRequest } from 'next/server'
 export async function middleware(request: NextRequest) {
   try {
     const res = NextResponse.next()
-    const supabase = createMiddlewareClient({ req: request, res })
-    const { data: { session } } = await supabase.auth.getSession()
+    const supabase = createMiddlewareClient<any>({
+      req: request,
+      res: res
+    })
+    
+    const { data } = await supabase.auth.getSession()
+    const session = data.session
 
     // Pathname'i response header'larına ekle
     res.headers.set('x-pathname', request.nextUrl.pathname)
