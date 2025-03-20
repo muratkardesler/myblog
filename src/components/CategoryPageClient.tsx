@@ -73,14 +73,17 @@ export default function CategoryPageClient({ initialCategory, initialPosts, slug
     try {
       // IP adresi ve user agent bilgisini almak için basit bir API çağrısı yapıyoruz
       const response = await fetch('/api/visitor-info');
-      const { ip, userAgent } = await response.json();
+      const { ip } = await response.json();
       
-      const liked = await likePost(postId, ip);
+      const result = await likePost(postId, ip);
       
-      setLikedPosts(prev => ({
-        ...prev,
-        [postId]: liked
-      }));
+      // Beğeni durumunu güncelle
+      if (result.success) {
+        setLikedPosts(prev => ({
+          ...prev,
+          [postId]: result.action === 'liked'
+        }));
+      }
       
       // Beğeni sayısını güncelle
       const newCount = await getPostLikes(postId);

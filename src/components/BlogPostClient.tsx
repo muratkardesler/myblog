@@ -53,11 +53,14 @@ export default function BlogPostClient({ post }: BlogPostClientProps) {
     try {
       // IP adresi ve user agent bilgisini almak için basit bir API çağrısı yapıyoruz
       const response = await fetch('/api/visitor-info');
-      const { ip, userAgent } = await response.json();
+      const { ip } = await response.json();
       
-      const liked = await likePost(post.id, ip);
+      const result = await likePost(post.id, ip);
       
-      setIsLiked(liked);
+      // result nesnesindeki success ve action değerlerine göre işlem yap
+      if (result.success) {
+        setIsLiked(result.action === 'liked');
+      }
       
       // Beğeni sayısını güncelle
       const newCount = await getPostLikes(post.id);

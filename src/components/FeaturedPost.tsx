@@ -56,10 +56,14 @@ export default function FeaturedPost() {
     try {
       // IP adresi ve user agent bilgisini almak için basit bir API çağrısı yapıyoruz
       const response = await fetch('/api/visitor-info');
-      const { ip, userAgent } = await response.json();
+      const { ip } = await response.json();
       
-      const liked = await likePost(post.id, ip);
-      setIsLiked(liked);
+      const result = await likePost(post.id, ip);
+      
+      // Beğeni durumunu güncelle
+      if (result.success) {
+        setIsLiked(result.action === 'liked');
+      }
       
       // Beğeni sayısını güncelle
       loadLikes();
