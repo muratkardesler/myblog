@@ -474,7 +474,8 @@ export async function registerUser(email: string, password: string, full_name: s
       options: {
         data: {
           full_name: full_name
-        }
+        },
+        emailRedirectTo: typeof window !== 'undefined' ? `${window.location.origin}/auth/confirm` : undefined
       }
     });
     
