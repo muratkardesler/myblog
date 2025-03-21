@@ -15,14 +15,21 @@ function ConfirmContent() {
   const supabase = createClientComponentClient();
 
   useEffect(() => {
-    // Önemli: Eğer localhost'tayız ve site URL'si tanımlanmışsa, gerçek siteye yönlendir
-    if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
-      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
+    // Sayfanın en üstünde bu kontrol yapılır - URL'de code veya token_hash varsa
+    // ve localhost'taysa, doğrudan canlı siteye yönlendir
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      const code = urlParams.get('code');
+      const token_hash = urlParams.get('token_hash');
       
-      if (siteUrl) {
-        console.log(`Localhost'tan yönlendiriliyor: ${siteUrl}/auth/confirm${window.location.search}`);
-        window.location.href = `${siteUrl}/auth/confirm${window.location.search}`;
-        return;
+      // Eğer doğrulama parametreleri varsa ve localhost'tayız
+      if ((code || token_hash) && window.location.hostname === 'localhost') {
+        const productionUrl = 'https://muratblog.com';
+        console.log(`Localhost doğrulama isteği saptandı, yönlendiriliyor: ${productionUrl}/auth/confirm${window.location.search}`);
+        
+        // Sayfayı doğrudan gerçek siteye yönlendirme
+        window.location.replace(`${productionUrl}/auth/confirm${window.location.search}`);
+        return; // useEffect'i burada sonlandır, aşağıdaki kodlar çalışmasın
       }
     }
 

@@ -454,10 +454,8 @@ export async function registerUser(email: string, password: string, full_name: s
   try {
     const supabase = createClient();
     
-    // Canlı site URL'sini al
-    const siteUrl = typeof window !== 'undefined' 
-      ? process.env.NEXT_PUBLIC_SITE_URL || window.location.origin
-      : process.env.NEXT_PUBLIC_SITE_URL;
+    // ÖNEMLİ: Canlı site URL'sini doğrudan kullan, localhost kullanma
+    const siteUrl = 'https://muratblog.com';
       
     // Önce e-posta adresinin zaten kullanımda olup olmadığını kontrol et
     const { data: userExists } = await supabase
