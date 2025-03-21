@@ -15,6 +15,17 @@ function ConfirmContent() {
   const supabase = createClientComponentClient();
 
   useEffect(() => {
+    // Önemli: Eğer localhost'tayız ve site URL'si tanımlanmışsa, gerçek siteye yönlendir
+    if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
+      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
+      
+      if (siteUrl) {
+        console.log(`Localhost'tan yönlendiriliyor: ${siteUrl}/auth/confirm${window.location.search}`);
+        window.location.href = `${siteUrl}/auth/confirm${window.location.search}`;
+        return;
+      }
+    }
+
     async function confirmEmailChange() {
       setLoading(true);
       try {
