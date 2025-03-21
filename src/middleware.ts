@@ -18,6 +18,21 @@ export async function middleware(req: NextRequest) {
   const res = NextResponse.next()
   
   try {
+    // Localhost yönlendirmesi düzeltme
+    const url = req.nextUrl.clone()
+    
+    // Eğer confirm sayfasında code parametresi varsa ve localhosta yönlendirme varsa,
+    // gerçek siteye yönlendir
+    if (url.pathname.startsWith('/auth/confirm') && url.hostname === 'localhost') {
+      // Canlı site URL'si (kendi sitenizin URL'sini buraya yazın)
+      const productionUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://muratblog.com'
+      
+      // URL'yi üret
+      const newUrl = new URL(url.pathname + url.search, productionUrl)
+      
+      return NextResponse.redirect(newUrl)
+    }
+    
     // Supabase client oluştur
     const supabase = createMiddlewareClient({ req, res })
     

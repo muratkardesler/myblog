@@ -453,6 +453,12 @@ export async function createCategory(category: Category) {
 export async function registerUser(email: string, password: string, full_name: string) {
   try {
     const supabase = createClient();
+    
+    // Canlı site URL'sini al
+    const siteUrl = typeof window !== 'undefined' 
+      ? process.env.NEXT_PUBLIC_SITE_URL || window.location.origin
+      : process.env.NEXT_PUBLIC_SITE_URL;
+      
     // Önce e-posta adresinin zaten kullanımda olup olmadığını kontrol et
     const { data: userExists } = await supabase
       .from('users')
@@ -475,7 +481,7 @@ export async function registerUser(email: string, password: string, full_name: s
         data: {
           full_name: full_name
         },
-        emailRedirectTo: `${window.location.origin}/auth/confirm`,
+        emailRedirectTo: `${siteUrl}/auth/confirm`,
       }
     });
     
