@@ -70,44 +70,89 @@ export default function WorkLogsPage() {
   const [filterMonth, setFilterMonth] = useState(new Date().getMonth() + 1);
   const [filterYear, setFilterYear] = useState(new Date().getFullYear());
 
+  // İş takip sistemi için kullanıcının ayın 24'ünden sonraki ay 24'üne kadar tarih aralığını otomatik hesaplayan değişkenleri ekleyelim
+  const [startDate, setStartDate] = useState<string>('');
+  const [endDate, setEndDate] = useState<string>('');
+  const [workingDaysCount, setWorkingDaysCount] = useState<number>(0);
+  const [workDays, setWorkDays] = useState<number>(0);
+  const [weekendDays, setWeekendDays] = useState<number>(0);
+
+  // Kullanıcı ayarlarını veritabanından getir
+  const loadUserSettings = async (userId: string) => {
+    if (!userId) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('user_settings')
+        .select('*')
+        .eq('user_id', userId)
+        .single();
+
+      if (error && error.code !== 'PGRST116') { // PGRST116: Kayıt bulunamadığında
+        console.error('Kullanıcı ayarları yüklenirken hata:', error);
+        return null;
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Kullanıcı ayarları yüklenirken hata:', error);
+      return null;
+    }
+  };
+
+  // Kullanıcı ayarlarını veritabanına kaydet veya güncelle
+  const saveUserSettings = async (userId: string, settings: {
+    start_date: string;
+    end_date: string;
+    filter_month: number;
+    filter_year: number;
+  }) => {
+    if (!userId) return;
+
+    try {
+      // Önce kullanıcı ayarlarının var olup olmadığını kontrol et
+      const existingSettings = await loadUserSettings(userId);
+
+      if (existingSettings) {
+        // Varsa güncelle
+        const { error } = await supabase
+          .from('user_settings')
+          .update({
+            start_date: settings.start_date,
+            end_date: settings.end_date,
+            filter_month: settings.filter_month,
+            filter_year: settings.filter_year,
+            updated_at: new Date().toISOString()
+          })
+          .eq('user_id', userId);
+
+        if (error) throw error;
+      } else {
+        // Yoksa yeni kayıt oluştur
+        const { error } = await supabase
+          .from('user_settings')
+          .insert({
+            user_id: userId,
+            start_date: settings.start_date,
+            end_date: settings.end_date,
+            filter_month: settings.filter_month,
+            filter_year: settings.filter_year
+          });
+
+        if (error) throw error;
+      }
+    } catch (error) {
+      console.error('Kullanıcı ayarları kaydedilirken hata:', error);
+      toast.error('Ayarlar kaydedilirken bir hata oluştu.');
+    }
+  };
+
   // İş kayıtlarını getirme fonksiyonu
   const loadWorkLogs = async (userId: string) => {
     if (!userId) return;
     
-    try {
-      setLoadingLogs(true);
-      
-      // Ay başlangıç ve bitiş tarihlerini hesapla (YYYY-MM-DD formatında)
-      const startDate = formatDateToYYYYMMDD(new Date(filterYear, filterMonth - 1, 1));
-      const endDate = formatDateToYYYYMMDD(new Date(filterYear, filterMonth, 0));
-      
-      const { data, error } = await supabase
-        .from('work_logs')
-        .select('*')
-        .eq('user_id', userId)
-        .gte('date', startDate)
-        .lte('date', endDate)
-        .order('date', { ascending: false });
-        
-      if (error) {
-        throw error;
-      }
-      
-      // Aktif çalışma var mı kontrol et
-      const activeWorkLog = data?.find(log => log.end_time === null);
-      if (activeWorkLog) {
-        setActiveLog(activeWorkLog);
-      } else {
-        setActiveLog(null);
-      }
-      
-      setWorkLogs(data || []);
-    } catch (error) {
-      console.error('İş kayıtları yüklenirken hata:', error);
-      toast.error('İş kayıtları yüklenirken bir hata oluştu.');
-    } finally {
-      setLoadingLogs(false);
-    }
+    // Tarih aralığını hesapla ve kayıtları getir
+    calculateDateRange(filterMonth, filterYear);
   };
 
   useEffect(() => {
@@ -141,14 +186,74 @@ export default function WorkLogsPage() {
           // Kullanıcı bilgilerini sakla
           setUser(refreshedUserInfo.user);
           
-          // Kullanıcıya ait iş takibi verilerini getir
-          await loadWorkLogs(refreshedUserInfo.user.id);
+          // Veritabanından kullanıcı ayarlarını getir
+          const userSettings = await loadUserSettings(refreshedUserInfo.user.id);
+          
+          if (userSettings) {
+            // Kayıtlı ayarlar varsa kullan
+            setStartDate(userSettings.start_date);
+            setEndDate(userSettings.end_date);
+            setFilterMonth(userSettings.filter_month);
+            setFilterYear(userSettings.filter_year);
+            
+            if (refreshedUserInfo.user?.id) {
+              loadWorkLogsDateRange(refreshedUserInfo.user.id, userSettings.start_date, userSettings.end_date);
+              calculateWorkDays(userSettings.start_date, userSettings.end_date);
+            }
+          } else {
+            // Yoksa varsayılan tarih aralığını hesapla
+            const defaultRange = calculateDefaultDateRange(filterMonth, filterYear);
+            setStartDate(defaultRange.start);
+            setEndDate(defaultRange.end);
+            setWorkingDaysCount(defaultRange.workDays);
+            
+            // Varsayılan ayarları veritabanına kaydet
+            if (refreshedUserInfo.user?.id) {
+              saveUserSettings(refreshedUserInfo.user.id, {
+                start_date: defaultRange.start,
+                end_date: defaultRange.end,
+                filter_month: filterMonth,
+                filter_year: filterYear
+              });
+              
+              loadWorkLogsDateRange(refreshedUserInfo.user.id, defaultRange.start, defaultRange.end);
+            }
+          }
         } else {
           // Kullanıcı bilgilerini sakla
           setUser(userInfo.user);
           
-          // Kullanıcıya ait iş takibi verilerini getir
-          await loadWorkLogs(userInfo.user.id);
+          // Veritabanından kullanıcı ayarlarını getir
+          const userSettings = await loadUserSettings(userInfo.user.id);
+          
+          if (userSettings) {
+            // Kayıtlı ayarlar varsa kullan
+            setStartDate(userSettings.start_date);
+            setEndDate(userSettings.end_date);
+            setFilterMonth(userSettings.filter_month);
+            setFilterYear(userSettings.filter_year);
+            
+            if (userInfo.user?.id) {
+              loadWorkLogsDateRange(userInfo.user.id, userSettings.start_date, userSettings.end_date);
+              calculateWorkDays(userSettings.start_date, userSettings.end_date);
+            }
+          } else {
+            // Yoksa varsayılan tarih aralığını hesapla
+            const defaultRange = calculateDefaultDateRange(filterMonth, filterYear);
+            setStartDate(defaultRange.start);
+            setEndDate(defaultRange.end);
+            
+            // Varsayılan ayarları veritabanına kaydet
+            if (userInfo.user?.id) {
+              saveUserSettings(userInfo.user.id, {
+                start_date: defaultRange.start,
+                end_date: defaultRange.end,
+                filter_month: filterMonth,
+                filter_year: filterYear
+              });
+              calculateDateRange(filterMonth, filterYear);
+            }
+          }
         }
         
       } catch (error) {
@@ -160,7 +265,7 @@ export default function WorkLogsPage() {
     };
 
     checkAuth();
-  }, [router, filterMonth, filterYear]);
+  }, []);
 
   // Form veri değişikliklerini işleme
   const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -218,8 +323,10 @@ export default function WorkLogsPage() {
         duration: '1.00'
       });
       
-      // Kayıtları yenile
-      loadWorkLogs(userId);
+      // Kayıtları yenile - mevcut tarih aralığını koru
+      if (userId) {
+        loadWorkLogsDateRange(userId, startDate, endDate);
+      }
       
     } catch (error) {
       console.error('İş kaydı eklenirken hata:', error);
@@ -260,7 +367,9 @@ export default function WorkLogsPage() {
       if (error) throw error;
       
       toast.success('İş kaydı başarıyla silindi.');
-      loadWorkLogs(userId);
+      
+      // Kayıtları yenile - mevcut tarih aralığını koru
+      loadWorkLogsDateRange(userId, startDate, endDate);
     } catch (error) {
       console.error('İş kaydı silinirken hata:', error);
       toast.error('İş kaydı silinirken bir hata oluştu.');
@@ -277,6 +386,108 @@ export default function WorkLogsPage() {
   const handleMonthYearChange = (month: number, year: number) => {
     setFilterMonth(month);
     setFilterYear(year);
+    
+    // 24'ünden 24'üne tarih aralığını hesapla
+    calculateDateRange(month, year);
+  };
+
+  // 24'ünden 24'üne tarih aralığını hesaplayan fonksiyon
+  const calculateDateRange = (month: number, year: number) => {
+    const defaultRange = calculateDefaultDateRange(month, year);
+    
+    setStartDate(defaultRange.start);
+    setEndDate(defaultRange.end);
+    setWorkingDaysCount(defaultRange.workDays);
+    
+    // İş kayıtlarını bu tarih aralığına göre yeniden yükle
+    if (user?.id) {
+      loadWorkLogsDateRange(user.id, defaultRange.start, defaultRange.end);
+    }
+  };
+
+  // Varsayılan tarih aralığını hesaplayan fonksiyon (24'ünden 24'üne)
+  const calculateDefaultDateRange = (month: number, year: number) => {
+    // Ay başlangıç ve bitiş tarihleri (24'ünden 24'üne)
+    let startMonth = month - 1;
+    let startYear = year;
+    
+    if (startMonth === 0) {
+      startMonth = 12;
+      startYear = year - 1;
+    }
+    
+    // Başlangıç: Önceki ayın 24'ü
+    const start = new Date(startYear, startMonth - 1, 24);
+    // Bitiş: Seçilen ayın 24'ü
+    const end = new Date(year, month - 1, 24);
+    
+    // İş günlerini hesapla (hafta içi günler)
+    let workDays = 0;
+    for (let day = new Date(start); day <= end; day.setDate(day.getDate() + 1)) {
+      const dayOfWeek = day.getDay();
+      if (dayOfWeek !== 0 && dayOfWeek !== 6) { // 0: Pazar, 6: Cumartesi
+        workDays++;
+      }
+    }
+    
+    return {
+      start: formatDateToYYYYMMDD(start),
+      end: formatDateToYYYYMMDD(end),
+      workDays
+    };
+  };
+
+  // İki tarih arasındaki iş günü sayısını hesapla
+  const calculateWorkDays = (start: string, end: string) => {
+    const startDate = new Date(start);
+    const endDate = new Date(end);
+    let workDays = 0;
+    
+    for (let day = new Date(startDate); day <= endDate; day.setDate(day.getDate() + 1)) {
+      const dayOfWeek = day.getDay();
+      if (dayOfWeek !== 0 && dayOfWeek !== 6) { // 0: Pazar, 6: Cumartesi
+        workDays++;
+      }
+    }
+    
+    setWorkingDaysCount(workDays);
+    return workDays;
+  };
+
+  // Belirli tarih aralığına göre iş kayıtlarını getir
+  const loadWorkLogsDateRange = async (userId: string, start: string, end: string) => {
+    if (!userId) return;
+    
+    try {
+      setLoadingLogs(true);
+      
+      const { data, error } = await supabase
+        .from('work_logs')
+        .select('*')
+        .eq('user_id', userId)
+        .gte('date', start)
+        .lte('date', end)
+        .order('date', { ascending: false });
+        
+      if (error) {
+        throw error;
+      }
+      
+      // Aktif çalışma var mı kontrol et
+      const activeWorkLog = data?.find(log => log.end_time === null);
+      if (activeWorkLog) {
+        setActiveLog(activeWorkLog);
+      } else {
+        setActiveLog(null);
+      }
+      
+      setWorkLogs(data || []);
+    } catch (error) {
+      console.error('İş kayıtları yüklenirken hata:', error);
+      toast.error('İş kayıtları yüklenirken bir hata oluştu.');
+    } finally {
+      setLoadingLogs(false);
+    }
   };
 
   // Mevcut ay için toplam çalışma bilgisini hesapla
@@ -284,26 +495,10 @@ export default function WorkLogsPage() {
     if (!workLogs.length) return { 
       totalHours: 0, 
       percentage: 0, 
-      workDays: 0, 
+      workDays: workingDaysCount, 
       totalDays: 0,
       uniqueDays: 0
     };
-    
-    // Ayın gün sayısı
-    const daysInMonth = new Date(filterYear, filterMonth, 0).getDate();
-    
-    // İş günü sayısı (hafta içi günler)
-    let workDays = 0;
-    
-    // Ayın her günü için kontrol et
-    for (let i = 1; i <= daysInMonth; i++) {
-      const date = new Date(filterYear, filterMonth - 1, i);
-      // Hafta içi mi? (0: Pazar, 6: Cumartesi)
-      const dayOfWeek = date.getDay();
-      if (dayOfWeek !== 0 && dayOfWeek !== 6) {
-        workDays++;
-      }
-    }
     
     // Toplam çalışma süresi
     const totalHours = workLogs.reduce((sum, log) => sum + parseFloat(String(log.duration)), 0);
@@ -315,13 +510,13 @@ export default function WorkLogsPage() {
     const uniqueDays = uniqueDatesSet.size;
     
     // Yüzde hesapla (iş günü tamamlama yüzdesi)
-    const percentage = workDays > 0 ? (uniqueDays / workDays) * 100 : 0;
+    const percentage = workingDaysCount > 0 ? (uniqueDays / workingDaysCount) * 100 : 0;
     
     return {
       totalHours,
-      workDays,
+      workDays: workingDaysCount,
       uniqueDays,
-      totalDays: daysInMonth,
+      totalDays: 0,
       percentage
     };
   };
@@ -341,6 +536,52 @@ export default function WorkLogsPage() {
     'Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran',
     'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'
   ];
+
+  const handleCustomDateRange = (start: string, end: string) => {
+    setStartDate(start);
+    setEndDate(end);
+    
+    // Başlangıç ayını Calendar bileşeninde göstermek için
+    // filterMonth ve filterYear değerlerini güncelle
+    const startDate = new Date(start);
+    const startMonth = startDate.getMonth() + 1;
+    const startYear = startDate.getFullYear();
+    
+    // Filtre ayını güncelle (takvimde görünmesi için)
+    if (startMonth !== filterMonth || startYear !== filterYear) {
+      setFilterMonth(startMonth);
+      setFilterYear(startYear);
+    }
+    
+    // Veritabanına kaydet
+    if (user?.id) {
+      saveUserSettings(user.id, {
+        start_date: start,
+        end_date: end,
+        filter_month: startMonth,
+        filter_year: startYear
+      });
+      
+      loadWorkLogsDateRange(user.id, start, end);
+      calculateWorkDays(start, end);
+    }
+    
+    // Modal'ı kapat
+    document.getElementById('custom-date-range-modal')?.classList.add('hidden');
+  };
+
+  // Tarih seçildiğinde çalışacak fonksiyon
+  const handleDateSelect = (date: string) => {
+    setFormData({
+      ...formData,
+      date
+    });
+    // Formun olduğu bölüme scroll yap
+    document.getElementById('new-worklog-form')?.scrollIntoView({ 
+      behavior: 'smooth',
+      block: 'start'
+    });
+  };
 
   // Oturum kontrolü yapılana kadar yükleniyor göster
   if (loading) {
@@ -440,27 +681,44 @@ export default function WorkLogsPage() {
                           <div className="bg-purple-500 h-2.5 rounded-full" style={{ width: `${stats.percentage}%` }}></div>
                         </div>
                       </div>
+                      
+                      <div className="bg-gray-800/50 p-4 rounded-lg border border-gray-700/50">
+                        <div className="flex justify-between items-center mb-2">
+                          <p className="text-sm text-gray-400">Tarih Aralığı</p>
+                          <button 
+                            onClick={() => document.getElementById('custom-date-range-modal')?.classList.remove('hidden')}
+                            className="text-xs text-purple-400 hover:text-purple-300"
+                          >
+                            Değiştir
+                          </button>
+                        </div>
+                        <p className="text-sm font-bold text-white">{startDate.split('-').reverse().join('/')} - {endDate.split('-').reverse().join('/')}</p>
+                      </div>
                     </div>
                   </div>
                   
                   {/* Takvim Komponenti */}
                   <div className="sm:col-span-2">
-                    <Calendar 
-                      month={filterMonth} 
-                      year={filterYear} 
-                      workLogs={workLogs}
-                      onSelectDate={(date) => {
-                        setFormData({
-                          ...formData,
-                          date
-                        });
-                        // Formun olduğu bölüme scroll yap
-                        document.getElementById('new-worklog-form')?.scrollIntoView({ 
-                          behavior: 'smooth',
-                          block: 'start'
-                        });
-                      }}
-                    />
+                    {loadingLogs ? (
+                      <div className="flex justify-center items-center h-64">
+                        <div className="loader"></div>
+                      </div>
+                    ) : (
+                      <Calendar 
+                        month={filterMonth} 
+                        year={filterYear}
+                        workLogs={workLogs}
+                        onSelectDate={handleDateSelect}
+                        startDate={startDate}
+                        endDate={endDate}
+                        onMonthChange={(month, year) => {
+                          setFilterMonth(month);
+                          setFilterYear(year);
+                        }}
+                        currentMonth={filterMonth}
+                        currentYear={filterYear}
+                      />
+                    )}
                   </div>
                 </div>
                 
@@ -629,6 +887,119 @@ export default function WorkLogsPage() {
         onConfirm={handleDeleteConfirm}
         onCancel={() => setDeleteModal(prev => ({ ...prev, isOpen: false }))}
       />
+
+      {/* Tarih aralığı seçme modal */}
+      <div id="custom-date-range-modal" className="hidden fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
+        <div className="bg-gray-800 rounded-xl p-6 max-w-md w-full relative">
+          <button 
+            onClick={() => document.getElementById('custom-date-range-modal')?.classList.add('hidden')}
+            className="absolute top-4 right-4 text-gray-400 hover:text-white"
+          >
+            <i className="ri-close-line text-xl"></i>
+          </button>
+          
+          <h3 className="text-xl font-bold text-white mb-4">Tarih Aralığı Seçin</h3>
+          
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-1">Başlangıç Tarihi</label>
+              <input 
+                type="date" 
+                value={startDate}
+                onChange={(e) => {
+                  if (new Date(e.target.value) <= new Date(endDate)) {
+                    const newStartDate = e.target.value;
+                    setStartDate(newStartDate);
+                    
+                    // Tarih aralığını hesapla ve veritabanına kaydet
+                    if (user?.id) {
+                      const date = new Date(newStartDate);
+                      const month = date.getMonth() + 1;
+                      const year = date.getFullYear();
+                      
+                      saveUserSettings(user.id, {
+                        start_date: newStartDate,
+                        end_date: endDate,
+                        filter_month: month,
+                        filter_year: year
+                      });
+                      
+                      loadWorkLogsDateRange(user.id, newStartDate, endDate);
+                      calculateWorkDays(newStartDate, endDate);
+                      
+                      // Başlangıç tarihinin ayını takvimde göster
+                      if (month !== filterMonth || year !== filterYear) {
+                        setFilterMonth(month);
+                        setFilterYear(year);
+                      }
+                    }
+                  } else {
+                    toast.error('Başlangıç tarihi, bitiş tarihinden sonra olamaz.');
+                  }
+                }}
+                className="w-full bg-gray-700 border border-gray-600 text-white rounded-lg px-3 py-2"
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-1">Bitiş Tarihi</label>
+              <input 
+                type="date" 
+                value={endDate}
+                onChange={(e) => {
+                  if (new Date(startDate) <= new Date(e.target.value)) {
+                    const newEndDate = e.target.value;
+                    setEndDate(newEndDate);
+                    
+                    // Veritabanına kaydet
+                    if (user?.id) {
+                      saveUserSettings(user.id, {
+                        start_date: startDate,
+                        end_date: newEndDate,
+                        filter_month: filterMonth,
+                        filter_year: filterYear
+                      });
+                      
+                      loadWorkLogsDateRange(user.id, startDate, newEndDate);
+                      calculateWorkDays(startDate, newEndDate);
+                    }
+                  } else {
+                    toast.error('Bitiş tarihi, başlangıç tarihinden önce olamaz.');
+                  }
+                }}
+                className="w-full bg-gray-700 border border-gray-600 text-white rounded-lg px-3 py-2"
+              />
+            </div>
+            
+            <div className="pt-4 flex justify-between">
+              <button 
+                onClick={() => {
+                  // Mevcut ayın 24'ünden önceki ayın 24'üne olan varsayılan aralığı kullan
+                  const defaultRange = calculateDefaultDateRange(filterMonth, filterYear);
+                  handleCustomDateRange(defaultRange.start, defaultRange.end);
+                }}
+                className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg"
+              >
+                Varsayılana Döndür
+              </button>
+              
+              <button 
+                onClick={() => {
+                  // Tarih aralığını uygula ve modal'ı kapat
+                  if (user?.id) {
+                    loadWorkLogsDateRange(user.id, startDate, endDate);
+                    calculateWorkDays(startDate, endDate);
+                  }
+                  document.getElementById('custom-date-range-modal')?.classList.add('hidden');
+                }}
+                className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg"
+              >
+                Uygula
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
     </>
   );
 } 

@@ -37,6 +37,9 @@ export default function ReportsPage() {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [selectedReport, setSelectedReport] = useState('monthly');
+  const [startDate, setStartDate] = useState<string>('');
+  const [endDate, setEndDate] = useState<string>('');
+  const [workingDaysCount, setWorkingDaysCount] = useState<number>(0);
   
   // Rapor verileri
   const [reportData, setReportData] = useState<WorkLog[]>([]);
@@ -86,41 +89,61 @@ export default function ReportsPage() {
     try {
       setLoadingReport(true);
       
-      // Ay başlangıç ve bitiş tarihlerini hesapla
-      const startDate = new Date(selectedYear, selectedMonth - 1, 1).toISOString().split('T')[0];
-      const endDate = new Date(selectedYear, selectedMonth, 0).toISOString().split('T')[0];
+      // Kullanıcı ayarlarından kayıtlı tarih aralığını getir
+      const { data: userSettings, error: settingsError } = await supabase
+        .from('user_settings')
+        .select('*')
+        .eq('user_id', userId)
+        .single();
+      
+      let start = '';
+      let end = '';
+      let workDays = 0;
+      
+      if (settingsError && settingsError.code !== 'PGRST116') {
+        console.error('Kullanıcı ayarları yüklenirken hata:', settingsError);
+      }
+      
+      // Kullanıcı ayarları varsa onları kullan, yoksa varsayılan tarih aralığını hesapla
+      if (userSettings && userSettings.start_date && userSettings.end_date) {
+        start = userSettings.start_date;
+        end = userSettings.end_date;
+        
+        // İş günlerini hesapla
+        const startDate = new Date(start);
+        const endDate = new Date(end);
+        workDays = calculateWorkDays(startDate, endDate);
+        
+        // State'leri güncelle
+        setStartDate(start);
+        setEndDate(end);
+        setWorkingDaysCount(workDays);
+        
+        // UI için ay ve yıl değerlerini güncelle
+        const endDateObj = new Date(end);
+        setSelectedMonth(endDateObj.getMonth() + 1);
+        setSelectedYear(endDateObj.getFullYear());
+      } else {
+        // Varsayılan tarih aralığı
+        const rangeObj = calculateDateRange(selectedMonth, selectedYear);
+        start = rangeObj.start;
+        end = rangeObj.end;
+        workDays = rangeObj.workDays;
+      }
       
       // İş kayıtlarını getir
       const { data: logs, error: logsError } = await supabase
         .from('work_logs')
         .select('*')
         .eq('user_id', userId)
-        .gte('date', startDate)
-        .lte('date', endDate)
+        .gte('date', start)
+        .lte('date', end)
         .order('date', { ascending: true });
         
       if (logsError) throw logsError;
       
-      // Aylık istatistikleri hesaplamak için fonksiyonu çağır
-      const { data: statsData, error: statsError } = await supabase
-        .rpc('calculate_monthly_work', {
-          p_user_id: userId,
-          p_year: selectedYear,
-          p_month: selectedMonth
-        });
-        
-      if (statsError) {
-        console.error('İstatistik hesaplanırken hata:', statsError);
-        // İstatistik fonksiyonu hata verirse manuel hesapla
-        calculateStats(logs || [], startDate, endDate);
-      } else if (statsData && statsData.length > 0) {
-        setMonthlyStats({
-          totalDays: statsData[0].total_days || 0,
-          completedDays: statsData[0].completed_days || 0,
-          totalDuration: statsData[0].total_duration || 0,
-          completionPercentage: statsData[0].completion_percentage || 0
-        });
-      }
+      // Hesaplanmış istatistikleri manuel oluştur
+      calculateStats(logs || [], start, end, workDays);
       
       setReportData(logs || []);
     } catch (error) {
@@ -131,20 +154,79 @@ export default function ReportsPage() {
     }
   };
 
-  // Manuel istatistik hesaplama (API fonksiyonu çalışmazsa)
-  const calculateStats = (logs: WorkLog[], startDate: string, endDate: string) => {
-    // İş günü sayısı (hafta içi günleri)
-    const start = new Date(startDate);
-    const end = new Date(endDate);
+  // İki tarih arasındaki iş günlerini hesapla
+  const calculateWorkDays = (startDate: Date, endDate: Date): number => {
     let workDays = 0;
+    const currentDate = new Date(startDate);
     
-    // Başlangıç ve bitiş tarihleri arasındaki her gün için kontrol
-    for (let day = new Date(start); day <= end; day.setDate(day.getDate() + 1)) {
-      // Hafta içi mi? (0: Pazar, 6: Cumartesi)
-      const dayOfWeek = day.getDay();
+    // Her gün için kontrol
+    while (currentDate <= endDate) {
+      const dayOfWeek = currentDate.getDay();
+      // 0: Pazar, 6: Cumartesi - hafta içi ise say
       if (dayOfWeek !== 0 && dayOfWeek !== 6) {
         workDays++;
       }
+      // Sonraki güne geç
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+    
+    return workDays;
+  };
+
+  // 24'ünden 24'üne tarih aralığını hesaplayan fonksiyon
+  const calculateDateRange = (month: number, year: number) => {
+    // Ay başlangıç ve bitiş tarihleri (24'ünden 24'üne)
+    let startMonth = month - 1;
+    let startYear = year;
+    
+    if (startMonth === 0) {
+      startMonth = 12;
+      startYear = year - 1;
+    }
+    
+    // Başlangıç: Önceki ayın 24'ü
+    const start = new Date(startYear, startMonth - 1, 24);
+    // Bitiş: Seçilen ayın 24'ü
+    const end = new Date(year, month - 1, 24);
+    
+    // İş günlerini hesapla (hafta içi günler)
+    let workDays = 0;
+    for (let day = new Date(start); day <= end; day.setDate(day.getDate() + 1)) {
+      const dayOfWeek = day.getDay();
+      if (dayOfWeek !== 0 && dayOfWeek !== 6) { // 0: Pazar, 6: Cumartesi
+        workDays++;
+      }
+    }
+    
+    const formattedStart = formatDate(start);
+    const formattedEnd = formatDate(end);
+    
+    setStartDate(formattedStart);
+    setEndDate(formattedEnd);
+    setWorkingDaysCount(workDays);
+    
+    return {
+      start: formattedStart,
+      end: formattedEnd,
+      workDays: workDays
+    };
+  };
+
+  // Tarihi YYYY-MM-DD formatına dönüştüren yardımcı fonksiyon
+  const formatDate = (date: Date): string => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  // Manuel istatistik hesaplama (API fonksiyonu çalışmazsa)
+  const calculateStats = (logs: WorkLog[], startDate: string, endDate: string, workDays = 0) => {
+    // İş günü sayısı belirtilmediyse hesapla
+    let calculatedWorkDays = workDays;
+    
+    if (calculatedWorkDays === 0) {
+      calculatedWorkDays = calculateWorkDays(new Date(startDate), new Date(endDate));
     }
     
     // Toplam süre hesapla
@@ -155,10 +237,10 @@ export default function ReportsPage() {
     const completedDays = uniqueDates.size;
     
     setMonthlyStats({
-      totalDays: workDays,
+      totalDays: calculatedWorkDays,
       completedDays: completedDays,
       totalDuration: totalDuration,
-      completionPercentage: workDays > 0 ? (completedDays / workDays) * 100 : 0
+      completionPercentage: calculatedWorkDays > 0 ? (completedDays / calculatedWorkDays) * 100 : 0
     });
   };
 
@@ -330,33 +412,49 @@ export default function ReportsPage() {
                   </div>
                 </div>
                 
-                {/* Rapor özeti */}
-                <div className="bg-gray-700/30 border border-gray-600/30 rounded-xl p-5 mb-8">
-                  <div className="flex flex-wrap items-center justify-between mb-4">
-                    <h2 className="text-lg font-medium text-white">Rapor Özeti</h2>
+                {/* Rapor Özeti */}
+                <div className="mb-6 bg-gray-800/40 border border-gray-700/40 rounded-xl p-6">
+                  <h2 className="text-xl text-white font-semibold mb-6">Rapor Özeti</h2>
+                  
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="bg-gray-800/60 p-4 rounded-lg">
+                      <div className="text-gray-400 text-sm mb-1">Toplam İş Günü</div>
+                      <div className="text-2xl font-bold text-white">{monthlyStats.totalDays}</div>
+                    </div>
+                    
+                    <div className="bg-gray-800/60 p-4 rounded-lg">
+                      <div className="text-gray-400 text-sm mb-1">Çalışılan Günler</div>
+                      <div className="text-2xl font-bold text-white">{monthlyStats.completedDays}</div>
+                    </div>
+                    
+                    <div className="bg-gray-800/60 p-4 rounded-lg">
+                      <div className="text-gray-400 text-sm mb-1">Toplam Çalışma</div>
+                      <div className="text-2xl font-bold text-white">{monthlyStats.totalDuration.toFixed(2)} <span className="text-sm text-gray-400">birim</span></div>
+                    </div>
+                    
+                    <div className="bg-gray-800/60 p-4 rounded-lg">
+                      <div className="text-gray-400 text-sm mb-1">Tamamlanma Oranı</div>
+                      <div className="text-2xl font-bold text-white">{monthlyStats.completionPercentage.toFixed(0)}%</div>
+                      <div className="w-full bg-gray-700 rounded-full h-2 mt-2">
+                        <div 
+                          className="bg-purple-500 h-2 rounded-full" 
+                          style={{ width: `${monthlyStats.completionPercentage > 100 ? 100 : monthlyStats.completionPercentage}%` }}
+                        ></div>
+                      </div>
+                    </div>
                   </div>
                   
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <div className="bg-gray-800/50 p-4 rounded-lg border border-gray-700/50">
-                      <p className="text-sm text-gray-400 mb-1">Toplam İş Günü</p>
-                      <p className="text-2xl font-bold text-white">{monthlyStats.totalDays}</p>
-                    </div>
-                    
-                    <div className="bg-gray-800/50 p-4 rounded-lg border border-gray-700/50">
-                      <p className="text-sm text-gray-400 mb-1">Çalışılan Günler</p>
-                      <p className="text-2xl font-bold text-white">{monthlyStats.completedDays}</p>
-                    </div>
-                    
-                    <div className="bg-gray-800/50 p-4 rounded-lg border border-gray-700/50">
-                      <p className="text-sm text-gray-400 mb-1">Toplam Çalışma</p>
-                      <p className="text-2xl font-bold text-white">{monthlyStats.totalDuration.toFixed(2)} <span className="text-sm text-gray-400">birim</span></p>
-                    </div>
-                    
-                    <div className="bg-gray-800/50 p-4 rounded-lg border border-gray-700/50">
-                      <p className="text-sm text-gray-400 mb-1">Tamamlanma Oranı</p>
-                      <p className="text-2xl font-bold text-white">{monthlyStats.completionPercentage.toFixed(0)}%</p>
-                      <div className="w-full bg-gray-700 rounded-full h-2.5 mt-2">
-                        <div className="bg-purple-500 h-2.5 rounded-full" style={{ width: `${monthlyStats.completionPercentage}%` }}></div>
+                  <div className="mt-4 pt-4 border-t border-gray-700/30">
+                    <div className="flex justify-between items-center">
+                      <div className="text-sm text-gray-400">Tarih Aralığı</div>
+                      <div className="text-sm text-white">
+                        {startDate && endDate ? (
+                          <>
+                            {new Date(startDate).toLocaleDateString('tr-TR')} - {new Date(endDate).toLocaleDateString('tr-TR')}
+                          </>
+                        ) : (
+                          <span className="text-gray-500">Tarih aralığı seçilmedi</span>
+                        )}
                       </div>
                     </div>
                   </div>
