@@ -137,13 +137,22 @@ export default function UsersPage() {
                       {user.last_login ? formatDate(user.last_login) : 'Hiç giriş yapmadı'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <button
-                        onClick={() => toggleUserStatus(user.id, user.is_active)}
-                        className={`p-2 rounded-lg ${user.is_active ? 'bg-red-900 hover:bg-red-800' : 'bg-green-900 hover:bg-green-800'} transition-colors`}
-                        title={user.is_active ? 'Pasif hale getir' : 'Aktif hale getir'}
-                      >
-                        <i className={`ri-${user.is_active ? 'user-unfollow' : 'user-follow'}-line`}></i>
-                      </button>
+                      <div className="flex justify-end space-x-2">
+                        <button
+                          onClick={() => toggleUserStatus(user.id, user.is_active)}
+                          className={`p-2 rounded-lg ${user.is_active ? 'bg-red-900 hover:bg-red-800' : 'bg-green-900 hover:bg-green-800'} transition-colors`}
+                          title={user.is_active ? 'Pasif hale getir' : 'Aktif hale getir'}
+                        >
+                          <i className={`ri-${user.is_active ? 'user-unfollow' : 'user-follow'}-line`}></i>
+                        </button>
+                        <Link
+                          href={`/admin/users/${user.id}/reports`}
+                          className="p-2 rounded-lg bg-blue-900 hover:bg-blue-800 transition-colors"
+                          title="İş Raporlarını Görüntüle"
+                        >
+                          <i className="ri-file-chart-line"></i>
+                        </Link>
+                      </div>
                     </td>
                   </tr>
                 ))}

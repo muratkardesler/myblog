@@ -231,6 +231,31 @@ export default function AdminDashboard() {
           </div>
         </div>
 
+        {/* İş Takip Raporları */}
+        <div className="bg-gray-800 border border-gray-700 rounded-xl p-6 hover:shadow-lg hover:shadow-primary/10 hover:border-primary/50 transition-all duration-300">
+          <div className="flex items-center justify-between mb-6">
+            <div className="p-3 rounded-lg bg-teal-500/10">
+              <i className="ri-file-chart-line text-2xl text-teal-400"></i>
+            </div>
+            <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-teal-500/10 text-teal-400">
+              İş Takibi
+            </span>
+          </div>
+          <h3 className="text-lg font-semibold text-white mb-2">İş Takip Raporları</h3>
+          <p className="text-gray-400 text-sm mb-4">
+            Üyelerin iş takip raporlarını görüntüleyin
+          </p>
+          <div className="flex items-center">
+            <Link
+              href="/admin/work-reports"
+              className="flex items-center flex-1 justify-center px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-gray-300 transition-colors"
+            >
+              <i className="ri-file-list-3-line mr-1.5"></i>
+              Raporları Görüntüle
+            </Link>
+          </div>
+        </div>
+
         {/* İletişim */}
         <div className="bg-gray-800 border border-gray-700 rounded-xl p-6 hover:shadow-lg hover:shadow-primary/10 hover:border-primary/50 transition-all duration-300">
           <div className="flex items-center justify-between mb-6">
@@ -388,6 +413,14 @@ export default function AdminDashboard() {
           >
             <i className="ri-settings-3-line text-2xl text-primary group-hover:text-white mr-3"></i>
             <span className="text-gray-300 group-hover:text-white">Ayarlar</span>
+          </Link>
+
+          <Link
+            href="/admin/work-reports"
+            className="flex items-center justify-center bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded-xl p-6 transition-colors group"
+          >
+            <i className="ri-file-chart-line text-2xl text-primary group-hover:text-white mr-3"></i>
+            <span className="text-gray-300 group-hover:text-white">İş Raporları</span>
           </Link>
 
           <Link

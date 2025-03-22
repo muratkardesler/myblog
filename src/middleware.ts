@@ -6,12 +6,21 @@ const protectedRoutes = [
   '/profile',
   '/profile/settings',
   '/profile/work-logs',
-  '/admin',
+]
+
+// Admin sayfaları
+const adminRoutes = [
+  '/admin'
 ]
 
 // Oturum olmadan erişim engellenen yolları kontrol et
 const isProtectedRoute = (path: string) => {
   return protectedRoutes.some(route => path.startsWith(route))
+}
+
+// Admin sayfalarını kontrol et
+const isAdminRoute = (path: string) => {
+  return adminRoutes.some(route => path.startsWith(route) && path !== '/admin/login')
 }
 
 export async function middleware(req: NextRequest) {
@@ -41,7 +50,16 @@ export async function middleware(req: NextRequest) {
     
     const path = req.nextUrl.pathname
     
-    // Korumalı sayfa kontrolü
+    // Admin sayfası kontrolü - ayrı yönlendirme
+    if (isAdminRoute(path)) {
+      if (!session) {
+        // Oturum yoksa admin giriş sayfasına yönlendir
+        const redirectUrl = new URL('/admin/login', req.url)
+        return NextResponse.redirect(redirectUrl)
+      }
+    }
+    
+    // Korumalı sayfa kontrolü (admin olmayan sayfalar için)
     if (isProtectedRoute(path)) {
       if (!session) {
         // Oturum yoksa giriş sayfasına yönlendir
