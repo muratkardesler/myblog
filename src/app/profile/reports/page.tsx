@@ -23,6 +23,7 @@ interface WorkLog {
   is_completed: boolean;
   created_at: string;
   updated_at: string;
+  log_time?: boolean;
 }
 
 export default function ReportsPage() {
@@ -265,11 +266,12 @@ export default function ReportsPage() {
       // İş detayları sayfası oluştur - sadece tarihten sonraki alanlar ile
       const excelData = reportData.map(log => ({
         'Tarih': new Date(log.date).toLocaleDateString('tr-TR'),
-        'Proje / Bölüm': log.project_code,
         'Danışman': user?.full_name || '',
-        'Kontak Kişi': log.contact_person || '',
         'Yapılan İş / Problem&Çözüm': log.description,
-        'Süre': parseFloat(String(log.duration)).toFixed(2)
+        'Süre': parseFloat(String(log.duration)).toFixed(2),
+        'Proje / Bölüm': log.project_code,
+        'Kontak Kişi': log.contact_person || '',
+        'Log Time': log.log_time ? '✓' : '✗'
       }));
       
       const detailsSheet = XLSX.utils.json_to_sheet(excelData);
@@ -277,11 +279,12 @@ export default function ReportsPage() {
       // Sütun genişliklerini ayarla
       const wscols = [
         { wch: 12 },  // Tarih
-        { wch: 15 },  // Proje / Bölüm
         { wch: 20 },  // Danışman
-        { wch: 20 },  // Kontak Kişi
         { wch: 50 },  // Yapılan İş / Problem&Çözüm
-        { wch: 8 }    // Süre
+        { wch: 8 },   // Süre
+        { wch: 15 },  // Proje / Bölüm
+        { wch: 20 },  // Kontak Kişi
+        { wch: 10 }   // Log Time
       ];
       
       detailsSheet['!cols'] = wscols;
@@ -479,6 +482,7 @@ export default function ReportsPage() {
                             <th scope="col" className="px-4 py-3">Süre</th>
                             <th scope="col" className="px-4 py-3">Proje / Bölüm</th>
                             <th scope="col" className="px-4 py-3">Kontak Kişi</th>
+                            <th scope="col" className="px-4 py-3">Log Time</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -490,6 +494,13 @@ export default function ReportsPage() {
                               <td className="px-4 py-3">{parseFloat(String(log.duration)).toFixed(2)}</td>
                               <td className="px-4 py-3">{log.project_code}</td>
                               <td className="px-4 py-3">{log.contact_person || ''}</td>
+                              <td className="px-4 py-3">
+                                {log.log_time ? (
+                                  <span className="text-green-400">✓</span>
+                                ) : (
+                                  <span className="text-red-400">✗</span>
+                                )}
+                              </td>
                             </tr>
                           ))}
                         </tbody>

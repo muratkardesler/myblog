@@ -31,6 +31,7 @@ export interface WorkLog {
   created_at: string;
   updated_at: string;
   end_time?: string | null;
+  log_time: boolean;
 }
 
 export default function WorkLogsPage() {
@@ -56,8 +57,13 @@ export default function WorkLogsPage() {
     client_name: '',
     contact_person: '',
     description: '',
-    duration: '1.00'
+    duration: '1.00',
+    log_time: false
   });
+
+  // Düzenleme modu için state
+  const [editMode, setEditMode] = useState(false);
+  const [editId, setEditId] = useState<string>('');
 
   // İş kayıtları listesi
   const [workLogs, setWorkLogs] = useState<WorkLog[]>([]);
@@ -276,7 +282,30 @@ export default function WorkLogsPage() {
     });
   };
 
-  // İş kaydı ekleme
+  // İş kaydını düzenleme
+  const handleEdit = (log: WorkLog) => {
+    setFormData({
+      date: log.date,
+      project_code: log.project_code || '',
+      client_name: log.client_name || '',
+      contact_person: log.contact_person || '',
+      description: log.description || '',
+      duration: typeof log.duration === 'number' 
+        ? log.duration.toFixed(2) 
+        : log.duration.toString(),
+      log_time: log.log_time || false
+    });
+    setEditMode(true);
+    setEditId(log.id);
+    
+    // Formun olduğu bölüme scroll yap
+    document.getElementById('new-worklog-form')?.scrollIntoView({ 
+      behavior: 'smooth',
+      block: 'start'
+    });
+  };
+
+  // İş kaydı ekleme veya güncelleme
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     
@@ -292,35 +321,64 @@ export default function WorkLogsPage() {
       
       const userId = authData.user.id;
       
-      // Yeni kaydı ekle
-      const { error: insertError } = await supabase
-        .from('work_logs')
-        .insert({
-          user_id: userId,
-          date: formData.date,
-          project_code: formData.project_code,
-          client_name: formData.client_name,
-          contact_person: formData.contact_person,
-          description: formData.description,
-          duration: formData.duration,
-          is_completed: true
-        });
+      if (editMode) {
+        // Kaydı güncelle
+        const { error: updateError } = await supabase
+          .from('work_logs')
+          .update({
+            date: formData.date,
+            project_code: formData.project_code,
+            client_name: formData.client_name,
+            contact_person: formData.contact_person,
+            description: formData.description,
+            duration: formData.duration,
+            log_time: formData.log_time,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', editId);
+          
+        if (updateError) {
+          console.error("İş kaydı güncellenirken DB hatası:", updateError);
+          throw updateError;
+        }
         
-      if (insertError) {
-        console.error("İş kaydı eklenirken DB hatası:", insertError);
-        throw insertError;
+        toast.success('İş kaydı başarıyla güncellendi.');
+        setEditMode(false);
+        setEditId('');
+      } else {
+        // Yeni kayıt ekle
+        const { error: insertError } = await supabase
+          .from('work_logs')
+          .insert({
+            user_id: userId,
+            date: formData.date,
+            project_code: formData.project_code,
+            client_name: formData.client_name,
+            contact_person: formData.contact_person,
+            description: formData.description,
+            duration: formData.duration,
+            log_time: formData.log_time,
+            is_completed: true
+          });
+          
+        if (insertError) {
+          console.error("İş kaydı eklenirken DB hatası:", insertError);
+          throw insertError;
+        }
+        
+        toast.success('İş kaydı başarıyla eklendi.');
       }
-      
-      toast.success('İş kaydı başarıyla eklendi.');
       
       // Formu temizle (tarih hariç)
       setFormData({
         ...formData,
+        date: new Date().toISOString().slice(0, 10),
         project_code: '',
         client_name: '',
         contact_person: '',
         description: '',
-        duration: '1.00'
+        duration: '1.00',
+        log_time: false
       });
       
       // Kayıtları yenile - mevcut tarih aralığını koru
@@ -329,9 +387,24 @@ export default function WorkLogsPage() {
       }
       
     } catch (error) {
-      console.error('İş kaydı eklenirken hata:', error);
-      toast.error('İş kaydı eklenirken bir hata oluştu.');
+      console.error('İş kaydı işleminde hata:', error);
+      toast.error(`İş kaydı ${editMode ? 'güncellenirken' : 'eklenirken'} bir hata oluştu.`);
     }
+  };
+
+  // İş kaydı ekleme formunda iptal
+  const handleCancelEdit = () => {
+    setEditMode(false);
+    setEditId('');
+    setFormData({
+      date: new Date().toISOString().slice(0, 10),
+      project_code: '',
+      client_name: '',
+      contact_person: '',
+      description: '',
+      duration: '1.00',
+      log_time: false
+    });
   };
 
   // İş kaydını silme
@@ -467,7 +540,7 @@ export default function WorkLogsPage() {
         .eq('user_id', userId)
         .gte('date', start)
         .lte('date', end)
-        .order('date', { ascending: false });
+        .order('date', { ascending: true });
         
       if (error) {
         throw error;
@@ -726,7 +799,9 @@ export default function WorkLogsPage() {
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                   {/* İş kaydı formu */}
                   <div className="bg-gray-700/30 border border-gray-600/30 rounded-xl p-5" id="new-worklog-form">
-                    <h2 className="text-lg font-medium text-white mb-4">Yeni İş Kaydı Ekle</h2>
+                    <h2 className="text-lg font-medium text-white mb-4">
+                      {editMode ? 'İş Kaydını Düzenle' : 'Yeni İş Kaydı Ekle'}
+                    </h2>
                     
                     <form onSubmit={handleSubmit} className="space-y-4">
                       <div>
@@ -793,27 +868,104 @@ export default function WorkLogsPage() {
                       </div>
                       
                       <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-1">Süre (Birim)</label>
-                        <select
-                          name="duration"
-                          value={formData.duration}
-                          onChange={handleChange}
-                          className="w-full bg-gray-700 border border-gray-600 text-white rounded-lg px-3 py-2"
-                          required
-                        >
-                          <option value="0.25">0.25</option>
-                          <option value="0.50">0.50</option>
-                          <option value="0.75">0.75</option>
-                          <option value="1.00">1.00</option>
-                        </select>
+                        <label htmlFor="duration" className="block text-sm font-medium text-gray-300 mb-1">Süre (Birim)</label>
+                        <div className="relative rounded-md">
+                          <input
+                            type="text"
+                            id="duration"
+                            name="duration"
+                            value={formData.duration}
+                            onChange={(e) => {
+                              let value = e.target.value;
+                              
+                              // Sadece sayılar ve nokta karakterine izin ver
+                              if (/^[0-9]*\.?[0-9]*$/.test(value) || value === '') {
+                                // Boş ise duration'ı boş string olarak ayarla
+                                if (value === '') {
+                                  setFormData({
+                                    ...formData,
+                                    duration: ''
+                                  });
+                                  return;
+                                }
+                                
+                                // Sayısal değer kontrolü
+                                const numValue = parseFloat(value);
+                                
+                                // Geçerli bir sayı ise ve 1'den küçük veya eşitse kaydet
+                                if (!isNaN(numValue) && numValue <= 1) {
+                                  setFormData({
+                                    ...formData,
+                                    duration: value
+                                  });
+                                }
+                              }
+                            }}
+                            onBlur={(e) => {
+                              // Input boş ise veya geçersiz bir değer ise minimum değere ayarla
+                              if (e.target.value === '' || isNaN(parseFloat(e.target.value))) {
+                                setFormData({
+                                  ...formData,
+                                  duration: '0.01'
+                                });
+                                return;
+                              }
+                              
+                              // Sayısal değere çevir
+                              let numValue = parseFloat(e.target.value);
+                              
+                              // 0.01'den küçükse minimum değere ayarla
+                              if (numValue < 0.01) numValue = 0.01;
+                              // 1'den büyükse maksimum değere ayarla
+                              if (numValue > 1) numValue = 1;
+                              
+                              // İki ondalık basamağa yuvarla ve string'e çevir
+                              const formattedValue = numValue.toFixed(2);
+                              
+                              setFormData({
+                                ...formData,
+                                duration: formattedValue
+                              });
+                            }}
+                            className="w-full bg-gray-700 border border-gray-600 text-white rounded-lg px-3 py-2"
+                            placeholder="Örn: 0.25, 0.50, 1.00"
+                            style={{ appearance: 'textfield', MozAppearance: 'textfield' }}
+                          />
+                          <div className="text-xs text-gray-400 mt-1">
+                            0.01 ile 1.00 arasında değerler girebilirsiniz (örn: 0.10, 0.25, 0.50, 0.75)
+                          </div>
+                        </div>
                       </div>
                       
-                      <div className="pt-4">
+                      {/* Log Time Alanı */}
+                      <div className="flex items-center">
+                        <input
+                          type="checkbox"
+                          id="log_time"
+                          checked={formData.log_time}
+                          onChange={(e) => setFormData({ ...formData, log_time: e.target.checked })}
+                          className="w-4 h-4 text-purple-600 bg-gray-700 border-gray-600 rounded focus:ring-purple-500 focus:ring-2"
+                        />
+                        <label htmlFor="log_time" className="ml-2 text-sm text-gray-300">
+                          Log Time
+                        </label>
+                      </div>
+                      
+                      <div className="pt-4 flex gap-3">
+                        {editMode && (
+                          <button 
+                            type="button" 
+                            onClick={handleCancelEdit}
+                            className="w-1/2 px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white font-medium rounded-lg transition-colors"
+                          >
+                            İptal
+                          </button>
+                        )}
                         <button 
                           type="submit" 
-                          className="w-full px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white font-medium rounded-lg transition-colors"
+                          className={`${editMode ? 'w-1/2' : 'w-full'} px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white font-medium rounded-lg transition-colors`}
                         >
-                          İş Kaydı Ekle
+                          {editMode ? 'Güncelle' : 'İş Kaydı Ekle'}
                         </button>
                       </div>
                     </form>
@@ -828,40 +980,101 @@ export default function WorkLogsPage() {
                         <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-purple-500"></div>
                       </div>
                     ) : workLogs.length > 0 ? (
-                      <div className="overflow-auto max-h-[400px] custom-scrollbar">
-                        <table className="min-w-full">
-                          <thead className="bg-gray-800/70 sticky top-0">
-                            <tr>
-                              <th className="px-4 py-2 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Tarih</th>
-                              <th className="px-4 py-2 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Proje / Bölüm</th>
-                              <th className="px-4 py-2 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Süre</th>
-                              <th className="px-4 py-2 text-xs font-medium text-gray-400 uppercase tracking-wider"></th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-gray-700/30">
-                            {workLogs.map((log) => (
-                              <tr key={log.id} className="hover:bg-gray-700/20">
-                                <td className="px-4 py-3 text-sm text-gray-200">
-                                  {new Date(log.date).toLocaleDateString('tr-TR')}
-                                </td>
-                                <td className="px-4 py-3 text-sm">
-                                  <div className="text-white font-medium">{log.project_code}</div>
-                                  <div className="text-gray-400 text-xs truncate max-w-[180px]">{log.description}</div>
-                                </td>
-                                <td className="px-4 py-3 text-sm text-white">{parseFloat(String(log.duration)).toFixed(2)}</td>
-                                <td className="px-4 py-3 text-right text-sm">
+                      <>
+                        {/* Masaüstü görünüm */}
+                        <div className="hidden md:block overflow-x-auto max-h-[400px] custom-scrollbar">
+                          <table className="w-full table-fixed">
+                            <thead className="bg-gray-800/70 sticky top-0">
+                              <tr>
+                                <th className="px-4 py-2 text-left text-xs font-medium text-gray-400 uppercase tracking-wider w-[100px]">Tarih</th>
+                                <th className="px-4 py-2 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Proje / Bölüm</th>
+                                <th className="px-4 py-2 text-left text-xs font-medium text-gray-400 uppercase tracking-wider w-[70px]">Süre</th>
+                                <th className="px-4 py-2 text-center text-xs font-medium text-gray-400 uppercase tracking-wider w-[70px]">Log Time</th>
+                                <th className="px-4 py-2 text-xs font-medium text-gray-400 uppercase tracking-wider text-center w-[100px]">İşlemler</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-700/30">
+                              {workLogs.map((log) => (
+                                <tr key={log.id} className="hover:bg-gray-700/20">
+                                  <td className="px-4 py-3 text-sm text-gray-200 w-[100px]">
+                                    {new Date(log.date).toLocaleDateString('tr-TR')}
+                                  </td>
+                                  <td className="px-4 py-3 text-sm">
+                                    <div className="text-white font-medium">{log.project_code}</div>
+                                    <div className="text-gray-400 text-xs truncate max-w-[180px]">{log.description}</div>
+                                  </td>
+                                  <td className="px-4 py-3 text-sm text-white w-[70px]">{parseFloat(String(log.duration)).toFixed(2)}</td>
+                                  <td className="px-4 py-3 text-sm text-center w-[70px]">
+                                    {log.log_time ? (
+                                      <span className="text-green-400">✓</span>
+                                    ) : (
+                                      <span className="text-red-400">✗</span>
+                                    )}
+                                  </td>
+                                  <td className="px-4 py-3 text-center w-[100px]">
+                                    <div className="flex justify-center space-x-3">
+                                      <button 
+                                        onClick={() => handleEdit(log)}
+                                        className="bg-blue-500/20 hover:bg-blue-500/40 text-blue-400 rounded-md p-1.5 transition-colors"
+                                        title="Düzenle"
+                                      >
+                                        <i className="ri-edit-line"></i>
+                                      </button>
+                                      <button 
+                                        onClick={() => handleDelete(log.id)}
+                                        className="bg-red-500/20 hover:bg-red-500/40 text-red-400 rounded-md p-1.5 transition-colors"
+                                        title="Sil"
+                                      >
+                                        <i className="ri-delete-bin-line"></i>
+                                      </button>
+                                    </div>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      
+                        {/* Mobil görünüm - kart tasarımı (tamamen yeniden düzenlendi) */}
+                        <div className="block md:hidden space-y-3 max-h-[400px] overflow-y-auto custom-scrollbar">
+                          {workLogs.map((log) => (
+                            <div key={log.id} className="bg-gray-800/50 rounded-lg p-4 border border-gray-700/30">
+                              <div className="flex justify-between items-start mb-2">
+                                <div className="text-sm text-gray-300 font-medium">{new Date(log.date).toLocaleDateString('tr-TR')}</div>
+                                <div className="flex space-x-2">
+                                  <button 
+                                    onClick={() => handleEdit(log)}
+                                    className="bg-blue-500/20 hover:bg-blue-500/40 text-blue-400 rounded-md p-1.5 transition-colors"
+                                  >
+                                    <i className="ri-edit-line text-sm"></i>
+                                  </button>
                                   <button 
                                     onClick={() => handleDelete(log.id)}
-                                    className="text-red-400 hover:text-red-300"
+                                    className="bg-red-500/20 hover:bg-red-500/40 text-red-400 rounded-md p-1.5 transition-colors"
                                   >
-                                    <i className="ri-delete-bin-line"></i>
+                                    <i className="ri-delete-bin-line text-sm"></i>
                                   </button>
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
+                                </div>
+                              </div>
+                              <div className="text-white font-medium mt-2">{log.project_code}</div>
+                              <div className="text-gray-400 text-sm my-2">{log.description}</div>
+                              <div className="flex justify-between items-center mt-3">
+                                <div className="text-white text-sm font-medium inline-block bg-gray-700/50 px-2 py-1 rounded">
+                                  {parseFloat(String(log.duration)).toFixed(2)} birim
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <span className="text-gray-400 text-sm">Log Time:</span>
+                                  {log.log_time ? (
+                                    <span className="text-green-400">✓</span>
+                                  ) : (
+                                    <span className="text-red-400">✗</span>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </>
                     ) : (
                       <div className="bg-gray-800/30 text-center py-8 px-4 rounded-lg">
                         <i className="ri-calendar-todo-line text-4xl text-gray-500 mb-2"></i>
