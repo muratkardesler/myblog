@@ -3,11 +3,22 @@ import { cookies } from 'next/headers';
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-// Supabase admin client oluştur (service role ile)
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL as string,
-  process.env.SUPABASE_SERVICE_ROLE_KEY as string
-);
+// Supabase URL'ini kontrol et
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+if (!supabaseUrl) {
+  throw new Error('NEXT_PUBLIC_SUPABASE_URL ortam değişkeni tanımlanmamış');
+}
+
+// Service role key'i kontrol et
+const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+if (!serviceRoleKey) {
+  console.warn('SUPABASE_SERVICE_ROLE_KEY tanımlanmamış, normal yetkilendirme kullanılacak');
+}
+
+// Supabase admin client oluştur (service role varsa kullan, yoksa normal client kullan)
+const supabaseAdmin = serviceRoleKey 
+  ? createClient(supabaseUrl, serviceRoleKey)
+  : null;
 
 export async function GET(request: NextRequest) {
   try {
@@ -27,8 +38,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Yetkilendirme hatası' }, { status: 401 });
     }
 
-    // Service role ile RLS'yi atlayarak verileri getir
-    const { data: userData, error: userError } = await supabaseAdmin
+    // Service role varsa onu kullan, yoksa normal client kullan
+    const queryClient = supabaseAdmin || supabase;
+    
+    // Kullanıcı bilgilerini getir
+    const { data: userData, error: userError } = await queryClient
       .from('users')
       .select('*')
       .eq('id', userId)
@@ -40,7 +54,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Kullanıcı ayarlarını getir
-    const { data: userSettings, error: settingsError } = await supabaseAdmin
+    const { data: userSettings, error: settingsError } = await queryClient
       .from('user_settings')
       .select('*')
       .eq('user_id', userId)

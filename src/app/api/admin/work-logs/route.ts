@@ -3,11 +3,22 @@ import { cookies } from 'next/headers';
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-// Supabase server-side client oluştur (environment variables kullanarak)
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL as string,
-  process.env.SUPABASE_SERVICE_ROLE_KEY as string
-);
+// Supabase URL'ini kontrol et
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+if (!supabaseUrl) {
+  throw new Error('NEXT_PUBLIC_SUPABASE_URL ortam değişkeni tanımlanmamış');
+}
+
+// Service role key'i kontrol et
+const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+if (!serviceRoleKey) {
+  console.warn('SUPABASE_SERVICE_ROLE_KEY tanımlanmamış, normal yetkilendirme kullanılacak');
+}
+
+// Supabase admin client oluştur (service role varsa kullan, yoksa normal client kullan)
+const supabaseAdmin = serviceRoleKey 
+  ? createClient(supabaseUrl, serviceRoleKey)
+  : null;
 
 export async function GET(request: NextRequest) {
   try {
@@ -29,9 +40,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Yetkilendirme hatası' }, { status: 401 });
     }
 
-    // Admin client ile RLS'yi atlayarak verileri getir
-    // Service role ile yapılan sorgular RLS politikalarını atlar
-    const { data, error } = await supabaseAdmin
+    // Service role varsa onu kullan, yoksa normal client kullan
+    const queryClient = supabaseAdmin || supabase;
+    
+    // Verileri getir - service role varsa RLS'yi atlar, yoksa normal erişim kullanır
+    const { data, error } = await queryClient
       .from('work_logs')
       .select('*')
       .eq('user_id', userId)
@@ -42,6 +55,12 @@ export async function GET(request: NextRequest) {
     if (error) {
       console.error('Work logs sorgu hatası:', error);
       return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    // RLS'yi atlatamıyorsak (service role yoksa) ve kullanıcı kendi verilerini sorguluyorsa sorun yok
+    // Ama farklı bir kullanıcının verilerini alıyorsa ve sonuçlar boşsa uyarı ver
+    if (!supabaseAdmin && session.user.id !== userId && (!data || data.length === 0)) {
+      console.warn('Kullanıcı başka bir kullanıcının verilerine erişmeye çalışıyor ve service_role eksik');
     }
 
     // Sonuçları döndür
