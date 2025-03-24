@@ -1,8 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { useRouter } from 'next/navigation';
+import toast from 'react-hot-toast';
+
+// Admin izin verilen e-posta adresleri - layout.tsx ile senkronize olmalı!
+const ADMIN_EMAILS = ['murat.kardesler3019@gmail.com'];
 
 export default function AdminLoginPage() {
   const [email, setEmail] = useState('');
@@ -12,21 +16,51 @@ export default function AdminLoginPage() {
   const router = useRouter();
   const supabase = createClientComponentClient();
 
+  useEffect(() => {
+    // Sayfa yüklendiğinde oturum kontrolü yap
+    const checkSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        // Oturum varsa ve admin ise direkt yönlendir
+        if (session.user.email && ADMIN_EMAILS.includes(session.user.email)) {
+          router.push('/admin');
+        } else {
+          // Admin değilse çıkış yap ve hata göster
+          await supabase.auth.signOut();
+          setError('Bu hesap admin paneline erişim yetkisine sahip değil.');
+        }
+      }
+    };
+    
+    checkSession();
+  }, [router, supabase]);
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      // Önce admin e-posta kontrolü
+      if (!ADMIN_EMAILS.includes(email)) {
+        setError('Bu e-posta adresi admin paneline erişim yetkisine sahip değil.');
+        setLoading(false);
+        return;
+      }
+
+      // Giriş yap
+      const { error: loginError } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
-      if (error) throw error;
+      if (loginError) throw loginError;
 
+      // Başarılı giriş işlemi
       router.push('/admin');
+      toast.success('Başarılı şekilde giriş yaptınız!');
     } catch (error) {
+      console.error('Login error:', error);
       setError('Giriş başarısız. Lütfen bilgilerinizi kontrol edin.');
     } finally {
       setLoading(false);

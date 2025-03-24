@@ -6,6 +6,10 @@ import { useRouter, usePathname } from 'next/navigation';
 import { FiHome, FiLogOut } from 'react-icons/fi'
 import Link from 'next/link'
 import { Toaster } from 'react-hot-toast';
+import toast from 'react-hot-toast';
+
+// Admin izin verilen e-posta adresleri - bu listeyi kendinize göre düzenleyin
+const ADMIN_EMAILS = ['murat.kardesler3019@gmail.com'];
 
 export default function AdminLayout({
   children,
@@ -13,18 +17,46 @@ export default function AdminLayout({
   children: React.ReactNode
 }) {
   const [loading, setLoading] = useState(true);
+  const [authorized, setAuthorized] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
   const supabase = createClientComponentClient();
 
   useEffect(() => {
     const checkUser = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session && pathname !== '/admin/login') {
-        router.push('/admin/login');
-      } else {
-        setLoading(false);
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (!session && pathname !== '/admin/login') {
+          // Oturum yoksa login sayfasına yönlendir
+          router.push('/admin/login');
+          return;
+        }
+        
+        // Login sayfasında oturum kontrolü yapmadan direk göster
+        if (pathname === '/admin/login') {
+          setLoading(false);
+          return;
+        }
+        
+        // Eğer oturum varsa yetkili mi kontrol et
+        if (session) {
+          const userEmail = session.user.email;
+          
+          // E-postaya göre admin yetkisi kontrolü
+          if (userEmail && ADMIN_EMAILS.includes(userEmail)) {
+            setAuthorized(true);
+            setLoading(false);
+          } else {
+            // Yetkisiz kullanıcı, ana sayfaya yönlendir
+            toast.error('Admin paneline erişim yetkiniz bulunmamaktadır.');
+            await supabase.auth.signOut();
+            router.push('/');
+          }
+        }
+      } catch (error) {
+        console.error('Admin yetki kontrolü hatası:', error);
+        router.push('/');
       }
     };
 
@@ -59,6 +91,25 @@ export default function AdminLayout({
         />
         {children}
       </>
+    );
+  }
+
+  // Eğer yetkisiz kullanıcıysa hiçbir şey gösterme (zaten yönlendirme yapılacak)
+  if (!authorized && pathname !== '/admin/login') {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-900">
+        <div className="flex flex-col items-center justify-center space-y-4 p-6 bg-gray-800 rounded-xl border border-gray-700 max-w-md">
+          <i className="ri-error-warning-fill text-4xl text-red-500"></i>
+          <h1 className="text-xl font-bold text-white">Erişim Engellendi</h1>
+          <p className="text-gray-400 text-center">Bu sayfaya erişim yetkiniz bulunmamaktadır.</p>
+          <Link 
+            href="/"
+            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-gray-300 transition-colors mt-2"
+          >
+            Ana Sayfaya Dön
+          </Link>
+        </div>
+      </div>
     );
   }
 
