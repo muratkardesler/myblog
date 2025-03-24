@@ -32,6 +32,7 @@ export interface WorkLog {
   updated_at: string;
   end_time?: string | null;
   log_time: boolean;
+  is_leave_day?: boolean; // İzinli gün kontrolü
 }
 
 export default function WorkLogsPage() {
@@ -54,11 +55,12 @@ export default function WorkLogsPage() {
   const [formData, setFormData] = useState({
     date: new Date().toISOString().slice(0, 10),
     project_code: '',
-    client_name: '',
+    client_name: user?.full_name || '',
     contact_person: '',
     description: '',
     duration: '1.00',
-    log_time: false
+    log_time: false,
+    is_leave_day: false // İzinli gün kontrolü eklendi
   });
 
   // Düzenleme modu için state
@@ -159,6 +161,42 @@ export default function WorkLogsPage() {
     
     // Tarih aralığını hesapla ve kayıtları getir
     calculateDateRange(filterMonth, filterYear);
+  };
+
+  // Belirli tarih aralığına göre iş kayıtlarını getir
+  const loadWorkLogsDateRange = async (userId: string, start: string, end: string) => {
+    if (!userId) return;
+    
+    try {
+      setLoadingLogs(true);
+      
+      const { data, error } = await supabase
+        .from('work_logs')
+        .select('*')
+        .eq('user_id', userId)
+        .gte('date', start)
+        .lte('date', end)
+        .order('date', { ascending: true });
+        
+      if (error) {
+        throw error;
+      }
+      
+      // Aktif çalışma var mı kontrol et (izinli günler hariç)
+      const activeWorkLog = data?.find(log => log.end_time === null && !log.is_leave_day);
+      if (activeWorkLog) {
+        setActiveLog(activeWorkLog);
+      } else {
+        setActiveLog(null);
+      }
+      
+      setWorkLogs(data || []);
+    } catch (error) {
+      console.error('İş kayıtları yüklenirken hata:', error);
+      toast.error('İş kayıtları yüklenirken bir hata oluştu.');
+    } finally {
+      setLoadingLogs(false);
+    }
   };
 
   useEffect(() => {
@@ -273,6 +311,16 @@ export default function WorkLogsPage() {
     checkAuth();
   }, []);
 
+  // useEffect ile kullanıcı bilgileri değiştiğinde sadece danışman alanını güncelle
+  useEffect(() => {
+    if (user) {
+      setFormData(prev => ({
+        ...prev,
+        client_name: user.full_name || ''
+      }));
+    }
+  }, [user]);
+
   // Form veri değişikliklerini işleme
   const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -284,19 +332,18 @@ export default function WorkLogsPage() {
 
   // İş kaydını düzenleme
   const handleEdit = (log: WorkLog) => {
-    setFormData({
-      date: log.date,
-      project_code: log.project_code || '',
-      client_name: log.client_name || '',
-      contact_person: log.contact_person || '',
-      description: log.description || '',
-      duration: typeof log.duration === 'number' 
-        ? log.duration.toFixed(2) 
-        : log.duration.toString(),
-      log_time: log.log_time || false
-    });
     setEditMode(true);
     setEditId(log.id);
+    setFormData({
+      date: log.date.split('T')[0],
+      project_code: log.project_code,
+      client_name: log.client_name || user?.full_name || '',
+      contact_person: log.contact_person || user?.full_name || '',
+      description: log.description,
+      duration: String(log.duration),
+      log_time: log.log_time,
+      is_leave_day: log.is_leave_day || false
+    });
     
     // Formun olduğu bölüme scroll yap
     document.getElementById('new-worklog-form')?.scrollIntoView({ 
@@ -310,11 +357,9 @@ export default function WorkLogsPage() {
     e.preventDefault();
     
     try {
-      // Direkt auth üzerinden kullanıcı bilgisi almaya çalış
       const { data: authData, error: authError } = await supabase.auth.getUser();
       
       if (authError || !authData?.user) {
-        console.error("Form gönderimi sırasında auth hatası:", authError);
         toast.error('Oturum bilgisi alınamadı. Lütfen sayfayı yenileyip tekrar deneyin.');
         return;
       }
@@ -333,14 +378,12 @@ export default function WorkLogsPage() {
             description: formData.description,
             duration: formData.duration,
             log_time: formData.log_time,
+            is_leave_day: formData.is_leave_day,
             updated_at: new Date().toISOString()
           })
           .eq('id', editId);
           
-        if (updateError) {
-          console.error("İş kaydı güncellenirken DB hatası:", updateError);
-          throw updateError;
-        }
+        if (updateError) throw updateError;
         
         toast.success('İş kaydı başarıyla güncellendi.');
         setEditMode(false);
@@ -358,28 +401,44 @@ export default function WorkLogsPage() {
             description: formData.description,
             duration: formData.duration,
             log_time: formData.log_time,
+            is_leave_day: formData.is_leave_day,
             is_completed: true
           });
           
-        if (insertError) {
-          console.error("İş kaydı eklenirken DB hatası:", insertError);
-          throw insertError;
-        }
+        if (insertError) throw insertError;
+        
+        // O güne ait toplam süreyi hesapla
+        const { data: dayLogs } = await supabase
+          .from('work_logs')
+          .select('duration')
+          .eq('user_id', userId)
+          .eq('date', formData.date);
+
+        const totalDuration = (dayLogs || []).reduce((sum, log) => {
+          return sum + parseFloat(String(log.duration));
+        }, parseFloat(formData.duration));
+
+        // Eğer toplam süre 1'e ulaşmadıysa aynı tarihi koru
+        // 1'e ulaştıysa bir sonraki güne geç
+        const currentDate = new Date(formData.date);
+        const nextDate = totalDuration >= 1 
+          ? new Date(currentDate.setDate(currentDate.getDate() + 1)) 
+          : currentDate;
+
+        // Formu temizle
+        setFormData({
+          date: nextDate.toISOString().slice(0, 10),
+          project_code: '',
+          client_name: user?.full_name || '',
+          contact_person: '',
+          description: '',
+          duration: '1.00',
+          log_time: false,
+          is_leave_day: false
+        });
         
         toast.success('İş kaydı başarıyla eklendi.');
       }
-      
-      // Formu temizle (tarih hariç)
-      setFormData({
-        ...formData,
-        date: new Date().toISOString().slice(0, 10),
-        project_code: '',
-        client_name: '',
-        contact_person: '',
-        description: '',
-        duration: '1.00',
-        log_time: false
-      });
       
       // Kayıtları yenile - mevcut tarih aralığını koru
       if (userId) {
@@ -399,11 +458,12 @@ export default function WorkLogsPage() {
     setFormData({
       date: new Date().toISOString().slice(0, 10),
       project_code: '',
-      client_name: '',
+      client_name: user?.full_name || '',
       contact_person: '',
       description: '',
       duration: '1.00',
-      log_time: false
+      log_time: false,
+      is_leave_day: false
     });
   };
 
@@ -527,42 +587,6 @@ export default function WorkLogsPage() {
     return workDays;
   };
 
-  // Belirli tarih aralığına göre iş kayıtlarını getir
-  const loadWorkLogsDateRange = async (userId: string, start: string, end: string) => {
-    if (!userId) return;
-    
-    try {
-      setLoadingLogs(true);
-      
-      const { data, error } = await supabase
-        .from('work_logs')
-        .select('*')
-        .eq('user_id', userId)
-        .gte('date', start)
-        .lte('date', end)
-        .order('date', { ascending: true });
-        
-      if (error) {
-        throw error;
-      }
-      
-      // Aktif çalışma var mı kontrol et
-      const activeWorkLog = data?.find(log => log.end_time === null);
-      if (activeWorkLog) {
-        setActiveLog(activeWorkLog);
-      } else {
-        setActiveLog(null);
-      }
-      
-      setWorkLogs(data || []);
-    } catch (error) {
-      console.error('İş kayıtları yüklenirken hata:', error);
-      toast.error('İş kayıtları yüklenirken bir hata oluştu.');
-    } finally {
-      setLoadingLogs(false);
-    }
-  };
-
   // Mevcut ay için toplam çalışma bilgisini hesapla
   const calculateMonthlyStats = () => {
     if (!workLogs.length) return { 
@@ -573,24 +597,33 @@ export default function WorkLogsPage() {
       uniqueDays: 0
     };
     
-    // Toplam çalışma süresi
-    const totalHours = workLogs.reduce((sum, log) => sum + parseFloat(String(log.duration)), 0);
+    // İzinli olmayan günlerin kayıtlarını filtrele
+    const nonLeaveLogs = workLogs.filter(log => !log.is_leave_day);
     
-    // Kayıt yapılan benzersiz günler - tarih formatını düzgün karşılaştır
-    const uniqueDatesSet = new Set(workLogs.map(log => {
+    // Toplam çalışma süresi (izinli günler hariç)
+    const totalHours = nonLeaveLogs.reduce((sum, log) => sum + parseFloat(String(log.duration)), 0);
+    
+    // Kayıt yapılan benzersiz günler - izinli günler hariç
+    const uniqueDatesSet = new Set(nonLeaveLogs.map(log => {
       return log.date.includes('T') ? log.date.split('T')[0] : log.date;
     }));
     const uniqueDays = uniqueDatesSet.size;
     
-    // Yüzde hesapla (iş günü tamamlama yüzdesi)
-    const percentage = workingDaysCount > 0 ? (uniqueDays / workingDaysCount) * 100 : 0;
+    // İzinli günleri say
+    const leaveDays = new Set(workLogs.filter(log => log.is_leave_day).map(log => 
+      log.date.includes('T') ? log.date.split('T')[0] : log.date
+    )).size;
+    
+    // Yüzde hesapla (iş günü tamamlama yüzdesi) - izinli günler çalışma gününden düşülür
+    const adjustedWorkDays = workingDaysCount - leaveDays;
+    const percentage = adjustedWorkDays > 0 ? (uniqueDays / adjustedWorkDays) * 100 : 0;
     
     return {
       totalHours,
-      workDays: workingDaysCount,
+      workDays: adjustedWorkDays,
       uniqueDays,
       totalDays: 0,
-      percentage
+      percentage: Math.min(percentage, 100) // Yüzde 100'ü geçmesin
     };
   };
 
@@ -654,6 +687,50 @@ export default function WorkLogsPage() {
       behavior: 'smooth',
       block: 'start'
     });
+  };
+
+  // İzinli gün ekleme fonksiyonu
+  const handleLeaveDay = async (date: string) => {
+    try {
+      const { data: authData, error: authError } = await supabase.auth.getUser();
+      
+      if (authError || !authData?.user) {
+        toast.error('Oturum bilgisi alınamadı. Lütfen sayfayı yenileyip tekrar deneyin.');
+        return;
+      }
+      
+      const userId = authData.user.id;
+      
+      // İzinli gün kaydını ekle
+      const { error: insertError } = await supabase
+        .from('work_logs')
+        .insert({
+          user_id: userId,
+          date: date,
+          project_code: 'İZİN',
+          client_name: user?.full_name || '',
+          contact_person: '',
+          description: 'İzinli Gün',
+          duration: '1.00',
+          log_time: false,
+          is_completed: true,
+          is_leave_day: true
+        });
+        
+      if (insertError) {
+        console.error("İzinli gün eklenirken hata:", insertError);
+        throw insertError;
+      }
+      
+      toast.success('İzinli gün başarıyla eklendi.');
+      
+      // Kayıtları yenile
+      loadWorkLogsDateRange(userId, startDate, endDate);
+      
+    } catch (error) {
+      console.error('İzinli gün eklenirken hata:', error);
+      toast.error('İzinli gün eklenirken bir hata oluştu.');
+    }
   };
 
   // Oturum kontrolü yapılana kadar yükleniyor göster
@@ -739,7 +816,9 @@ export default function WorkLogsPage() {
                     <div className="flex flex-col space-y-4">
                       <div className="bg-gray-800/50 p-4 rounded-lg border border-gray-700/50">
                         <p className="text-sm text-gray-400 mb-1">Toplam Çalışma</p>
-                        <p className="text-2xl font-bold text-white">{stats.totalHours} <span className="text-sm text-gray-400">birim</span></p>
+                        <p className="text-2xl font-bold text-white">
+                          {Number(stats.totalHours).toFixed(2)} <span className="text-sm text-gray-400">birim</span>
+                        </p>
                       </div>
                       
                       <div className="bg-gray-800/50 p-4 rounded-lg border border-gray-700/50">
@@ -790,6 +869,7 @@ export default function WorkLogsPage() {
                         }}
                         currentMonth={filterMonth}
                         currentYear={filterYear}
+                        onLeaveDay={handleLeaveDay}
                       />
                     )}
                   </div>
@@ -823,7 +903,7 @@ export default function WorkLogsPage() {
                           name="project_code"
                           value={formData.project_code}
                           onChange={handleChange}
-                          placeholder="örn: MLSFT-1128"
+                          placeholder="örn: SAFİR"
                           className="w-full bg-gray-700 border border-gray-600 text-white rounded-lg px-3 py-2"
                           required
                         />
@@ -937,18 +1017,43 @@ export default function WorkLogsPage() {
                         </div>
                       </div>
                       
-                      {/* Log Time Alanı */}
-                      <div className="flex items-center">
-                        <input
-                          type="checkbox"
-                          id="log_time"
-                          checked={formData.log_time}
-                          onChange={(e) => setFormData({ ...formData, log_time: e.target.checked })}
-                          className="w-4 h-4 text-purple-600 bg-gray-700 border-gray-600 rounded focus:ring-purple-500 focus:ring-2"
-                        />
-                        <label htmlFor="log_time" className="ml-2 text-sm text-gray-300">
-                          Log Time
-                        </label>
+                      {/* Log Time ve İzinli Gün Alanları */}
+                      <div className="flex items-center space-x-6">
+                        <div className="flex items-center">
+                          <input
+                            type="checkbox"
+                            id="log_time"
+                            checked={formData.log_time}
+                            onChange={(e) => setFormData({ ...formData, log_time: e.target.checked })}
+                            className="w-4 h-4 text-purple-600 bg-gray-700 border-gray-600 rounded focus:ring-purple-500 focus:ring-2"
+                          />
+                          <label htmlFor="log_time" className="ml-2 text-sm text-gray-300">
+                            Log Time
+                          </label>
+                        </div>
+
+                        <div className="flex items-center">
+                          <input
+                            type="checkbox"
+                            id="is_leave_day"
+                            checked={formData.is_leave_day}
+                            onChange={(e) => {
+                              const isLeaveDay = e.target.checked;
+                              setFormData({ 
+                                ...formData, 
+                                is_leave_day: isLeaveDay,
+                                project_code: isLeaveDay ? 'İZİN' : '',
+                                description: isLeaveDay ? 'İzinli Gün' : '',
+                                duration: '1.00',
+                                contact_person: ''
+                              });
+                            }}
+                            className="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500 focus:ring-2"
+                          />
+                          <label htmlFor="is_leave_day" className="ml-2 text-sm text-gray-300">
+                            İzinli Gün
+                          </label>
+                        </div>
                       </div>
                       
                       <div className="pt-4 flex gap-3">
@@ -994,43 +1099,50 @@ export default function WorkLogsPage() {
                               </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-700/30">
-                              {workLogs.map((log) => (
-                                <tr key={log.id} className="hover:bg-gray-700/20">
-                                  <td className="px-4 py-3 text-sm text-gray-200 w-[100px]">
-                                    {new Date(log.date).toLocaleDateString('tr-TR')}
-                                  </td>
-                                  <td className="px-4 py-3 text-sm">
-                                    <div className="text-white font-medium">{log.project_code}</div>
-                                    <div className="text-gray-400 text-xs truncate max-w-[180px]">{log.description}</div>
-                                  </td>
-                                  <td className="px-4 py-3 text-sm text-white w-[70px]">{parseFloat(String(log.duration)).toFixed(2)}</td>
-                                  <td className="px-4 py-3 text-sm text-center w-[70px]">
-                                    {log.log_time ? (
-                                      <span className="text-green-400">✓</span>
-                                    ) : (
-                                      <span className="text-red-400">✗</span>
-                                    )}
-                                  </td>
-                                  <td className="px-4 py-3 text-center w-[100px]">
-                                    <div className="flex justify-center space-x-3">
-                                      <button 
-                                        onClick={() => handleEdit(log)}
-                                        className="bg-blue-500/20 hover:bg-blue-500/40 text-blue-400 rounded-md p-1.5 transition-colors"
-                                        title="Düzenle"
-                                      >
-                                        <i className="ri-edit-line"></i>
-                                      </button>
-                                      <button 
-                                        onClick={() => handleDelete(log.id)}
-                                        className="bg-red-500/20 hover:bg-red-500/40 text-red-400 rounded-md p-1.5 transition-colors"
-                                        title="Sil"
-                                      >
-                                        <i className="ri-delete-bin-line"></i>
-                                      </button>
-                                    </div>
-                                  </td>
-                                </tr>
-                              ))}
+                              {workLogs.map((log) => {
+                                const duration = typeof log.duration === 'string' ? parseFloat(log.duration) : log.duration;
+                                const dailyDuration = Number(duration.toFixed(2));
+                                
+                                return (
+                                  <tr key={log.id} className="hover:bg-gray-700/20">
+                                    <td className="px-4 py-3 text-sm text-gray-200 w-[100px]">
+                                      {new Date(log.date).toLocaleDateString('tr-TR')}
+                                    </td>
+                                    <td className="px-4 py-3 text-sm">
+                                      <div className="text-white font-medium">{log.project_code}</div>
+                                      <div className="text-gray-400 text-xs truncate max-w-[180px]">{log.description}</div>
+                                    </td>
+                                    <td className="px-4 py-3 text-sm text-white w-[70px]">
+                                      {dailyDuration.toFixed(2)}
+                                    </td>
+                                    <td className="px-4 py-3 text-sm text-center w-[70px]">
+                                      {log.log_time ? (
+                                        <span className="text-green-400">✓</span>
+                                      ) : (
+                                        <span className="text-red-400">✗</span>
+                                      )}
+                                    </td>
+                                    <td className="px-4 py-3 text-center w-[100px]">
+                                      <div className="flex justify-center space-x-3">
+                                        <button 
+                                          onClick={() => handleEdit(log)}
+                                          className="bg-blue-500/20 hover:bg-blue-500/40 text-blue-400 rounded-md p-1.5 transition-colors"
+                                          title="Düzenle"
+                                        >
+                                          <i className="ri-edit-line"></i>
+                                        </button>
+                                        <button 
+                                          onClick={() => handleDelete(log.id)}
+                                          className="bg-red-500/20 hover:bg-red-500/40 text-red-400 rounded-md p-1.5 transition-colors"
+                                          title="Sil"
+                                        >
+                                          <i className="ri-delete-bin-line"></i>
+                                        </button>
+                                      </div>
+                                    </td>
+                                  </tr>
+                                );
+                              })}
                             </tbody>
                           </table>
                         </div>
@@ -1060,7 +1172,7 @@ export default function WorkLogsPage() {
                               <div className="text-gray-400 text-sm my-2">{log.description}</div>
                               <div className="flex justify-between items-center mt-3">
                                 <div className="text-white text-sm font-medium inline-block bg-gray-700/50 px-2 py-1 rounded">
-                                  {parseFloat(String(log.duration)).toFixed(2)} birim
+                                  {typeof log.duration === 'string' ? parseFloat(log.duration).toFixed(2) : log.duration.toFixed(2)} birim
                                 </div>
                                 <div className="flex items-center gap-1">
                                   <span className="text-gray-400 text-sm">Log Time:</span>

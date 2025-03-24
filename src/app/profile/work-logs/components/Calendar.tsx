@@ -11,17 +11,151 @@ interface CalendarProps {
   onMonthChange: (month: number, year: number) => void;
   currentMonth: number;
   currentYear: number;
+  onLeaveDay?: (date: string) => void; // İzinli gün ekleme fonksiyonu
 }
 
-export default function Calendar({ month, year, workLogs, onSelectDate, startDate, endDate, onMonthChange, currentMonth, currentYear }: CalendarProps) {
+// Özel Modal Bileşeni
+const WeekendConfirmModal = ({ 
+  isOpen, 
+  onClose, 
+  onConfirm, 
+  date 
+}: { 
+  isOpen: boolean; 
+  onClose: () => void; 
+  onConfirm: () => void;
+  date: Date;
+}) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      {/* Arka plan overlay */}
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose}></div>
+      
+      {/* Modal içeriği */}
+      <div className="relative bg-gray-800 rounded-xl shadow-xl p-6 w-[400px] border border-purple-500/20">
+        <div className="flex items-start mb-4">
+          <div className="mr-3 mt-1">
+            <i className="ri-information-line text-yellow-400 text-2xl"></i>
+          </div>
+          <div>
+            <h3 className="text-lg font-medium text-white mb-2">
+              Hafta Sonu Çalışma Onayı
+            </h3>
+            <p className="text-gray-300 text-sm">
+              {date.toLocaleDateString('tr-TR', { weekday: 'long' })} günü için çalışma kaydı eklemek üzeresiniz. 
+              Hafta sonları genellikle çalışma günü değildir.
+            </p>
+            <p className="text-gray-400 text-sm mt-2">
+              Yine de kayıt eklemek istiyor musunuz?
+            </p>
+          </div>
+        </div>
+        
+        <div className="flex justify-end gap-3">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 text-sm font-medium text-gray-300 hover:text-white bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors"
+          >
+            Vazgeç
+          </button>
+          <button
+            onClick={() => {
+              onConfirm();
+              onClose();
+            }}
+            className="px-4 py-2 text-sm font-medium text-white bg-purple-600 hover:bg-purple-500 rounded-lg transition-colors"
+          >
+            Evet, Ekle
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// İzin Modal Bileşeni
+const LeaveDayModal = ({ 
+  isOpen, 
+  onClose, 
+  onConfirm, 
+  date 
+}: { 
+  isOpen: boolean; 
+  onClose: () => void; 
+  onConfirm: () => void;
+  date: Date;
+}) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose}></div>
+      
+      <div className="relative bg-gray-800 rounded-xl shadow-xl p-6 w-[400px] border border-blue-500/20">
+        <div className="flex items-start mb-4">
+          <div className="mr-3 mt-1">
+            <i className="ri-calendar-event-line text-blue-400 text-2xl"></i>
+          </div>
+          <div>
+            <h3 className="text-lg font-medium text-white mb-2">
+              İzinli Gün İşlemi
+            </h3>
+            <p className="text-gray-300 text-sm">
+              {date.toLocaleDateString('tr-TR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })} 
+              tarihini izinli gün olarak işaretlemek istediğinize emin misiniz?
+            </p>
+          </div>
+        </div>
+        
+        <div className="flex justify-end gap-3">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 text-sm font-medium text-gray-300 hover:text-white bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors"
+          >
+            Vazgeç
+          </button>
+          <button
+            onClick={() => {
+              onConfirm();
+              onClose();
+            }}
+            className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-500 rounded-lg transition-colors"
+          >
+            İzinli Gün Olarak İşaretle
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default function Calendar({ month, year, workLogs, onSelectDate, startDate, endDate, onMonthChange, currentMonth, currentYear, onLeaveDay }: CalendarProps) {
   const [calendarDays, setCalendarDays] = useState<{ 
     date: Date; 
     hasLog: boolean; 
     duration: number; 
     hasFullDuration: boolean;
     isInRange: boolean; // 24'ünden 24'üne aralığında mı?
+    isLeaveDay?: boolean; // İzinli gün kontrolü
   }[]>([]);
   const [displayMode, setDisplayMode] = useState<'current' | 'previous'>('current');
+  const [weekendModal, setWeekendModal] = useState<{
+    isOpen: boolean;
+    date: Date | null;
+  }>({
+    isOpen: false,
+    date: null
+  });
+
+  const [leaveModal, setLeaveModal] = useState<{
+    isOpen: boolean;
+    date: Date | null;
+  }>({
+    isOpen: false,
+    date: null
+  });
 
   // Ay adları (Türkçe)
   const monthNames = [
@@ -85,12 +219,6 @@ export default function Calendar({ month, year, workLogs, onSelectDate, startDat
       // Seçilen ay veya önceki ay
       const calendarMonth = currentMonth;
       const calendarYear = currentYear;
-
-      // Gösterilen ayın ilk günü
-      const firstDay = new Date(calendarYear, calendarMonth - 1, 1);
-      
-      // Bir önceki ayın son günleri için ofseti hesapla (0=Pazar, 1=Pazartesi... olduğundan (firstDay.getDay() || 7) - 1 hesabı)
-      const offset = (firstDay.getDay() || 7) - 1;
       
       // Gösterilen ayın son günü
       const lastDay = new Date(calendarYear, calendarMonth, 0);
@@ -99,41 +227,7 @@ export default function Calendar({ month, year, workLogs, onSelectDate, startDat
       // Takvimde gösterilecek günleri oluştur
       const days = [];
       
-      // Önceki aydan gelen günler (dolgu)
-      for (let i = 0; i < offset; i++) {
-        const prevMonthLastDate = new Date(calendarYear, calendarMonth - 1, 0).getDate();
-        const prevMonthDay = new Date(calendarYear, calendarMonth - 2, prevMonthLastDate - i);
-        
-        // ISO formatı YYYY-MM-DD
-        const dateString = formatDateToYYYYMMDD(prevMonthDay);
-        
-        // Bu tarihte kayıt var mı kontrolü
-        const logsOnThisDay = workLogs.filter(log => {
-          const logDate = log.date.includes('T') 
-            ? log.date.split('T')[0] 
-            : log.date;
-          return logDate === dateString;
-        });
-        
-        // Günün toplam duration değerini hesapla
-        const totalDuration = logsOnThisDay.reduce((total, log) => total + parseFloat(String(log.duration)), 0);
-        
-        // Duration değeri tam 1.00 mi kontrol et
-        const hasFullDurationLog = logsOnThisDay.some(log => parseFloat(String(log.duration)) === 1.00);
-        
-        // Tarih aralığında mı kontrol et
-        const isInRange = isDateInRange(prevMonthDay, startDateObj, endDateObj);
-        
-        days.unshift({ 
-          date: prevMonthDay, 
-          hasLog: logsOnThisDay.length > 0,
-          duration: totalDuration,
-          hasFullDuration: hasFullDurationLog || totalDuration === 1.00,
-          isInRange
-        });
-      }
-      
-      // Gösterilen ayın günleri
+      // Sadece gösterilen ayın günlerini ekle
       for (let i = 1; i <= daysInMonth; i++) {
         const currentDate = new Date(calendarYear, calendarMonth - 1, i);
         // ISO formatı YYYY-MM-DD olmalı ve yerel saati dikkate almamalı
@@ -147,11 +241,20 @@ export default function Calendar({ month, year, workLogs, onSelectDate, startDat
           return logDate === dateString;
         });
         
-        // Günün toplam duration değerini hesapla
-        const totalDuration = logsOnThisDay.reduce((total, log) => total + parseFloat(String(log.duration)), 0);
+        // İzinli gün kontrolü
+        const isLeaveDay = logsOnThisDay.some(log => log.is_leave_day);
         
-        // Duration değeri tam 1.00 mi kontrol et
-        const hasFullDurationLog = logsOnThisDay.some(log => parseFloat(String(log.duration)) === 1.00);
+        // Günün toplam duration değerini hesapla ve yuvarla
+        const totalDuration = Number(logsOnThisDay.reduce((total, log) => {
+          const duration = typeof log.duration === 'string' ? parseFloat(log.duration) : log.duration;
+          return total + duration;
+        }, 0).toFixed(2));
+        
+        // Duration değeri tam 1.00 mi kontrol et (yuvarlama hatalarını önlemek için)
+        const hasFullDurationLog = logsOnThisDay.some(log => {
+          const duration = typeof log.duration === 'string' ? parseFloat(log.duration) : log.duration;
+          return Number(duration.toFixed(2)) === 1.00;
+        });
         
         // Tarih aralığında mı kontrol et
         const isInRange = isDateInRange(currentDate, startDateObj, endDateObj);
@@ -160,48 +263,15 @@ export default function Calendar({ month, year, workLogs, onSelectDate, startDat
           date: currentDate,
           hasLog: logsOnThisDay.length > 0,
           duration: totalDuration,
-          hasFullDuration: hasFullDurationLog || totalDuration === 1.00,
-          isInRange
+          hasFullDuration: hasFullDurationLog || Number(totalDuration.toFixed(2)) === 1.00,
+          isInRange,
+          isLeaveDay
         });
       }
-      
-      // Sonraki aydan gelen günler (dolgu) - toplam 42 gün olacak şekilde (6 hafta)
-      const remainingDays = 42 - days.length;
-      for (let i = 1; i <= remainingDays; i++) {
-        const nextMonthDay = new Date(calendarYear, calendarMonth, i);
-        
-        // ISO formatı YYYY-MM-DD
-        const dateString = formatDateToYYYYMMDD(nextMonthDay);
-        
-        // Bu tarihte kayıt var mı kontrolü
-        const logsOnThisDay = workLogs.filter(log => {
-          const logDate = log.date.includes('T') 
-            ? log.date.split('T')[0] 
-            : log.date;
-          return logDate === dateString;
-        });
-        
-        // Günün toplam duration değerini hesapla
-        const totalDuration = logsOnThisDay.reduce((total, log) => total + parseFloat(String(log.duration)), 0);
-        
-        // Duration değeri tam 1.00 mi kontrol et
-        const hasFullDurationLog = logsOnThisDay.some(log => parseFloat(String(log.duration)) === 1.00);
-        
-        // Tarih aralığında mı kontrol et
-        const isInRange = isDateInRange(nextMonthDay, startDateObj, endDateObj);
-        
-        days.push({ 
-          date: nextMonthDay,
-          hasLog: logsOnThisDay.length > 0,
-          duration: totalDuration,
-          hasFullDuration: hasFullDurationLog || totalDuration === 1.00,
-          isInRange
-        });
-      }
-      
+
       setCalendarDays(days);
     };
-    
+
     generateCalendarDays();
   }, [currentMonth, currentYear, workLogs, startDate, endDate]);
 
@@ -230,117 +300,170 @@ export default function Calendar({ month, year, workLogs, onSelectDate, startDat
   const handleDayClick = (date: Date, isInRange: boolean) => {
     // Sadece tarih aralığı içindeki günlere tıklanabilsin
     if (isInRange) {
-      onSelectDate(formatDateToYYYYMMDD(date));
+      // Hafta sonu kontrolü (6=Cumartesi, 0=Pazar)
+      const dayOfWeek = date.getDay();
+      const isWeekend = dayOfWeek === 6 || dayOfWeek === 0;
+      
+      if (isWeekend) {
+        // Modal'ı aç
+        setWeekendModal({
+          isOpen: true,
+          date: date
+        });
+      } else {
+        // Normal iş günü - direkt tarihi seç
+        onSelectDate(formatDateToYYYYMMDD(date));
+      }
     }
   };
 
-  // Takvim başlığı - şu an görüntülenen ay ve yıl
-  const calendarTitle = `${monthNames[currentMonth - 1]} ${currentYear}`;
-  
-  // Tarih aralığı bilgisi (eğer her iki tarih de seçiliyse)
-  const dateRangeInfo = startDateObj && endDateObj 
-    ? `${startDateObj.getDate()} ${monthNames[startDateObj.getMonth()]} - ${endDateObj.getDate()} ${monthNames[endDateObj.getMonth()]}`
-    : '';
-
   return (
     <div className="bg-gray-700/30 border border-gray-600/30 rounded-xl p-5">
-      <div className="flex items-center justify-between mb-5">
-        <div className="flex items-center">
-          <button 
-            onClick={handlePrevMonth}
-            className="text-white bg-purple-600 hover:bg-purple-700 px-3 py-1 rounded mr-3"
-          >
-            {displayMode === 'current' && startDateObj ? 'Başlangıç Ayı' : 'Önceki Ay'}
-          </button>
-          <h2 className="text-lg font-medium text-white">Aylık Takvim</h2>
-        </div>
-        <div className="flex items-center">
-          <div className="text-purple-300 font-medium">{calendarTitle}</div>
-          {dateRangeInfo && <div className="text-xs text-gray-400 ml-3">{dateRangeInfo}</div>}
-          <button 
-            onClick={handleNextMonth}
-            className="text-white bg-purple-600 hover:bg-purple-700 px-3 py-1 rounded ml-4"
-          >
-            {displayMode === 'previous' ? 'Şimdiki Ay' : 'Sonraki Ay'}
-          </button>
-        </div>
+      {/* Ay/Yıl Başlığı */}
+      <div className="flex justify-between items-center mb-4">
+        <button 
+          onClick={handlePrevMonth}
+          className="text-gray-400 hover:text-white p-2 rounded-lg hover:bg-gray-700/30"
+        >
+          <i className="ri-arrow-left-s-line text-xl"></i>
+        </button>
+        
+        <h2 className="text-lg font-medium text-white">
+          {monthNames[currentMonth - 1]} {currentYear}
+        </h2>
+        
+        <button 
+          onClick={handleNextMonth}
+          className="text-gray-400 hover:text-white p-2 rounded-lg hover:bg-gray-700/30"
+        >
+          <i className="ri-arrow-right-s-line text-xl"></i>
+        </button>
       </div>
       
-      <div className="grid grid-cols-7 gap-2">
-        {/* Haftanın günleri */}
+      {/* Hafta Günleri */}
+      <div className="grid grid-cols-7 gap-1 mb-1">
         {weekDays.map((day, index) => (
-          <div key={index} className="text-center text-gray-400 text-xs font-medium py-2">
+          <div key={index} className="text-center text-sm text-gray-400 py-2">
             {day}
           </div>
         ))}
+      </div>
+      
+      {/* Takvim Günleri */}
+      <div className="grid grid-cols-7 gap-1">
+        {/* İlk günün haftanın hangi gününe denk geldiğini hesapla */}
+        {Array.from({ length: (new Date(currentYear, currentMonth - 1, 1).getDay() + 6) % 7 }).map((_, index) => (
+          <div key={`empty-start-${index}`} className="aspect-square"></div>
+        ))}
         
-        {/* Takvim günleri */}
         {calendarDays.map((day, index) => {
-          const isCurrentMonth = day.date.getMonth() === currentMonth - 1;
-          const isToday = new Date().toDateString() === day.date.toDateString();
+          const dayOfWeek = day.date.getDay();
+          const isWeekend = dayOfWeek === 6 || dayOfWeek === 0;
           
           return (
             <div 
-              key={index} 
-              onClick={() => handleDayClick(day.date, day.isInRange)}
-              title={day.hasLog ? `${day.date.toLocaleDateString('tr-TR')} - ${day.duration} birim çalışma` : day.date.toLocaleDateString('tr-TR')}
+              key={index}
+              onClick={() => {
+                if (isWeekend) {
+                  setWeekendModal({
+                    isOpen: true,
+                    date: day.date
+                  });
+                } else {
+                  handleDayClick(day.date, day.isInRange);
+                }
+              }}
+              onDoubleClick={() => {
+                if (day.isInRange && !isWeekend) {
+                  setLeaveModal({
+                    isOpen: true,
+                    date: day.date
+                  });
+                }
+              }}
               className={`
-                relative p-2 text-center rounded-md transition-colors min-h-14
-                ${isCurrentMonth ? 'bg-gray-800/40' : 'bg-gray-800/10 text-gray-500'}
-                ${isToday ? 'ring-2 ring-purple-500' : ''}
-                ${day.isInRange ? day.hasLog ? 'hover:bg-purple-500/10 cursor-pointer' : 'hover:bg-gray-700/20 cursor-pointer' : 'opacity-40'}
-                ${day.isInRange ? 'ring-1 ring-green-500/30' : ''}
+                aspect-square p-1 relative cursor-pointer
+                ${day.isInRange ? 'hover:bg-gray-700/30' : 'opacity-50 cursor-not-allowed'}
+                ${isWeekend ? 'border border-red-500/30' : ''}
+                ${day.isInRange ? 'border-2 border-green-500/30' : ''}
               `}
             >
-              <div className="text-xs font-medium">{day.date.getDate()}</div>
-              
-              {day.hasLog && (
-                <div className="absolute inset-0 flex items-center justify-center opacity-10">
-                  <div className={`w-full h-full rounded-md ${day.hasFullDuration ? 'bg-purple-500' : 'bg-yellow-500'}`}></div>
-                </div>
-              )}
-              
-              {day.hasLog && (
-                <div className="relative z-10 flex items-center justify-center mt-1">
-                  <div className="flex flex-col items-center text-xs">
-                    {day.hasFullDuration ? (
-                      <i className="ri-checkbox-circle-fill text-purple-400 text-lg"></i>
-                    ) : (
-                      <i className="ri-time-line text-yellow-400 text-lg"></i>
-                    )}
-                    {day.duration > 0 && (
-                      <span className={`mt-1 font-medium ${day.hasFullDuration ? 'text-white' : 'text-yellow-300'}`}>
-                        {day.duration}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              )}
+              <div className={`
+                w-full h-full rounded-lg flex flex-col items-center justify-center
+                ${day.isLeaveDay ? 'bg-blue-500/20 border border-blue-500/30' : 
+                  day.hasLog ? (day.hasFullDuration ? 'bg-purple-500/20 border border-purple-500/30' : 'bg-yellow-500/20 border border-yellow-500/30') : 
+                  'bg-gray-800/50 border border-gray-700/30'}
+                ${isWeekend ? 'text-red-400' : day.isLeaveDay ? 'text-blue-400' : 'text-white'}
+              `}>
+                <span className={`text-sm font-medium ${isWeekend ? 'text-red-400' : day.isLeaveDay ? 'text-blue-400' : ''}`}>
+                  {day.date.getDate()}
+                </span>
+                {day.hasLog && !day.isLeaveDay && (
+                  <span className="text-xs mt-1">
+                    {day.duration.toFixed(2)}
+                  </span>
+                )}
+                {!day.hasLog && isWeekend && (
+                  <i className="ri-rest-time-line text-xs mt-1"></i>
+                )}
+                {day.isLeaveDay && (
+                  <i className="ri-calendar-event-line text-xs mt-1 text-blue-400"></i>
+                )}
+              </div>
             </div>
           );
         })}
       </div>
       
-      <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center text-xs text-gray-400">
-          <i className="ri-checkbox-circle-fill text-purple-400 mr-1"></i>
-          <span>1.00 birim tamamlanan günler</span>
+      {/* Açıklama */}
+      <div className="mt-4 flex flex-wrap gap-4 text-sm">
+        <div className="flex items-center gap-2">
+          <i className="ri-checkbox-circle-line text-purple-400"></i>
+          <span className="text-gray-300">1.00 birim tamamlanan günler</span>
         </div>
-        <div className="flex items-center text-xs text-gray-400">
-          <i className="ri-time-line text-yellow-400 mr-1"></i>
-          <span>Kısmi çalışma günleri</span>
+        <div className="flex items-center gap-2">
+          <i className="ri-time-line text-yellow-400"></i>
+          <span className="text-gray-300">Kısmi çalışma günleri</span>
         </div>
-        <div className="flex items-center text-xs text-gray-400">
-          <i className="ri-square-line text-green-400 mr-1"></i>
-          <span>
-            {startDateObj && endDateObj ? (
-              `${startDateObj.getDate()} ${monthNames[startDateObj.getMonth()]} - ${endDateObj.getDate()} ${monthNames[endDateObj.getMonth()]} aralığı`
-            ) : (
-              'Seçili tarih aralığı'
-            )}
-          </span>
+        <div className="flex items-center gap-2">
+          <i className="ri-rest-time-line text-red-400"></i>
+          <span className="text-gray-300">Hafta sonu tatil günleri</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <i className="ri-calendar-event-line text-blue-400"></i>
+          <span className="text-gray-300">İzinli günler</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <i className="ri-checkbox-blank-line text-green-400"></i>
+          <span className="text-gray-300">Seçili tarih aralığı</span>
         </div>
       </div>
+
+      {/* Hafta Sonu Onay Modalı */}
+      <WeekendConfirmModal
+        isOpen={weekendModal.isOpen}
+        onClose={() => setWeekendModal({ isOpen: false, date: null })}
+        onConfirm={() => {
+          if (weekendModal.date) {
+            handleDayClick(weekendModal.date, true);
+          }
+          setWeekendModal({ isOpen: false, date: null });
+        }}
+        date={weekendModal.date || new Date()}
+      />
+
+      {/* İzin Günü Modalı */}
+      <LeaveDayModal
+        isOpen={leaveModal.isOpen}
+        onClose={() => setLeaveModal({ isOpen: false, date: null })}
+        onConfirm={() => {
+          if (leaveModal.date && onLeaveDay) {
+            onLeaveDay(formatDateToYYYYMMDD(leaveModal.date));
+          }
+          setLeaveModal({ isOpen: false, date: null });
+        }}
+        date={leaveModal.date || new Date()}
+      />
     </div>
   );
 } 
