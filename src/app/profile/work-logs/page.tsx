@@ -16,6 +16,7 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import Calendar from './components/Calendar';
 import DeleteConfirmModal from '@/components/DeleteConfirmModal';
+import { CheckIcon, XMarkIcon, PencilSquareIcon, TrashIcon } from '@heroicons/react/24/outline';
 
 // İş kaydı tipi
 export interface WorkLog {
@@ -733,6 +734,11 @@ export default function WorkLogsPage() {
     }
   };
 
+  // Tarih formatı fonksiyonu
+  const formatDate = (date: string) => {
+    return new Date(date).toLocaleDateString('tr-TR');
+  };
+
   // Oturum kontrolü yapılana kadar yükleniyor göster
   if (loading) {
     return (
@@ -755,22 +761,214 @@ export default function WorkLogsPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
           <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
             <div className="md:col-span-3">
-              <div className="bg-gray-700/30 border border-gray-600/30 rounded-xl p-5 sticky top-24">
-                <h3 className="text-lg font-medium text-white mb-4">Profil Menüsü</h3>
-                <nav className="space-y-1">
-                  <Link href="/profile" className="flex items-center px-3 py-2 text-gray-300 hover:bg-gray-700/30 hover:text-white rounded-md">
-                    <i className="ri-user-line mr-3 text-gray-400"></i>
-                    <span>Profil Bilgilerim</span>
-                  </Link>
-                  <Link href="/profile/work-logs" className="flex items-center px-3 py-2 text-white bg-gray-800/50 rounded-md">
-                    <i className="ri-time-line mr-3 text-purple-400"></i>
-                    <span>İş Takibi</span>
-                  </Link>
-                  <Link href="/profile/reports" className="flex items-center px-3 py-2 text-gray-300 hover:bg-gray-700/30 hover:text-white rounded-md">
-                    <i className="ri-bar-chart-2-line mr-3 text-gray-400"></i>
-                    <span>Raporlar</span>
-                  </Link>
-                </nav>
+              <div className="space-y-6 sticky top-24">
+                <div className="bg-gray-700/30 border border-gray-600/30 rounded-xl p-5">
+                  <h3 className="text-lg font-medium text-white mb-4">Profil Menüsü</h3>
+                  <nav className="space-y-1">
+                    <Link href="/profile" className="flex items-center px-3 py-2 text-gray-300 hover:bg-gray-700/30 hover:text-white rounded-md">
+                      <i className="ri-user-line mr-3 text-gray-400"></i>
+                      <span>Profil Bilgilerim</span>
+                    </Link>
+                    <Link href="/profile/work-logs" className="flex items-center px-3 py-2 text-white bg-gray-800/50 rounded-md">
+                      <i className="ri-time-line mr-3 text-purple-400"></i>
+                      <span>İş Takibi</span>
+                    </Link>
+                    <Link href="/profile/reports" className="flex items-center px-3 py-2 text-gray-300 hover:bg-gray-700/30 hover:text-white rounded-md">
+                      <i className="ri-bar-chart-2-line mr-3 text-gray-400"></i>
+                      <span>Raporlar</span>
+                    </Link>
+                  </nav>
+                </div>
+
+                {/* İş kaydı formu */}
+                <div className="bg-gray-700/30 border border-gray-600/30 rounded-xl p-5" id="new-worklog-form">
+                  <h2 className="text-lg font-medium text-white mb-4">
+                    {editMode ? 'İş Kaydını Düzenle' : 'Yeni İş Kaydı Ekle'}
+                  </h2>
+                  
+                  <form onSubmit={handleSubmit} className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-1">Tarih</label>
+                      <input
+                        type="date"
+                        name="date"
+                        value={formData.date}
+                        onChange={handleChange}
+                        className="w-full bg-gray-700 border border-gray-600 text-white rounded-lg px-3 py-2"
+                        required
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-1">Proje / Bölüm</label>
+                      <input
+                        type="text"
+                        name="project_code"
+                        value={formData.project_code}
+                        onChange={handleChange}
+                        placeholder="örn: SAFİR"
+                        className="w-full bg-gray-700 border border-gray-600 text-white rounded-lg px-3 py-2"
+                        required
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-1">Danışman</label>
+                      <input
+                        type="text"
+                        name="client_name"
+                        value={formData.client_name}
+                        onChange={handleChange}
+                        placeholder="Danışman adı girin"
+                        className="w-full bg-gray-700 border border-gray-600 text-white rounded-lg px-3 py-2"
+                        required
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-1">Kontak Kişi</label>
+                      <input
+                        type="text"
+                        name="contact_person"
+                        value={formData.contact_person}
+                        onChange={handleChange}
+                        placeholder="Kontak kişi girin"
+                        className="w-full bg-gray-700 border border-gray-600 text-white rounded-lg px-3 py-2"
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-1">Yapılan İş / Problem&Çözüm</label>
+                      <textarea
+                        name="description"
+                        value={formData.description}
+                        onChange={handleChange}
+                        placeholder="Yapılan işi açıklayın"
+                        className="w-full bg-gray-700 border border-gray-600 text-white rounded-lg px-3 py-2"
+                        rows={3}
+                        required
+                      ></textarea>
+                    </div>
+                    
+                    <div>
+                      <label htmlFor="duration" className="block text-sm font-medium text-gray-300 mb-1">Süre (Birim)</label>
+                      <div className="relative rounded-md">
+                        <input
+                          type="text"
+                          id="duration"
+                          name="duration"
+                          value={formData.duration}
+                          onChange={(e) => {
+                            let value = e.target.value;
+                            
+                            if (/^[0-9]*\.?[0-9]*$/.test(value) || value === '') {
+                              if (value === '') {
+                                setFormData({
+                                  ...formData,
+                                  duration: ''
+                                });
+                                return;
+                              }
+                              
+                              const numValue = parseFloat(value);
+                              
+                              if (!isNaN(numValue) && numValue <= 1) {
+                                setFormData({
+                                  ...formData,
+                                  duration: value
+                                });
+                              }
+                            }
+                          }}
+                          onBlur={(e) => {
+                            if (e.target.value === '' || isNaN(parseFloat(e.target.value))) {
+                              setFormData({
+                                ...formData,
+                                duration: '0.01'
+                              });
+                              return;
+                            }
+                            
+                            let numValue = parseFloat(e.target.value);
+                            
+                            if (numValue < 0.01) numValue = 0.01;
+                            if (numValue > 1) numValue = 1;
+                            
+                            const formattedValue = numValue.toFixed(2);
+                            
+                            setFormData({
+                              ...formData,
+                              duration: formattedValue
+                            });
+                          }}
+                          className="w-full bg-gray-700 border border-gray-600 text-white rounded-lg px-3 py-2"
+                          placeholder="Örn: 0.25, 0.50, 1.00"
+                          style={{ appearance: 'textfield', MozAppearance: 'textfield' }}
+                        />
+                        <div className="text-xs text-gray-400 mt-1">
+                          0.01 ile 1.00 arasında değerler girebilirsiniz (örn: 0.10, 0.25, 0.50, 0.75)
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Log Time ve İzinli Gün Alanları */}
+                    <div className="flex items-center space-x-6">
+                      <div className="flex items-center">
+                        <input
+                          type="checkbox"
+                          id="log_time"
+                          checked={formData.log_time}
+                          onChange={(e) => setFormData({ ...formData, log_time: e.target.checked })}
+                          className="w-4 h-4 text-purple-600 bg-gray-700 border-gray-600 rounded focus:ring-purple-500 focus:ring-2"
+                        />
+                        <label htmlFor="log_time" className="ml-2 text-sm text-gray-300">
+                          Log Time
+                        </label>
+                      </div>
+
+                      <div className="flex items-center">
+                        <input
+                          type="checkbox"
+                          id="is_leave_day"
+                          checked={formData.is_leave_day}
+                          onChange={(e) => {
+                            const isLeaveDay = e.target.checked;
+                            setFormData({ 
+                              ...formData, 
+                              is_leave_day: isLeaveDay,
+                              project_code: isLeaveDay ? 'İZİN' : '',
+                              description: isLeaveDay ? 'İzinli Gün' : '',
+                              duration: '1.00',
+                              contact_person: ''
+                            });
+                          }}
+                          className="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500 focus:ring-2"
+                        />
+                        <label htmlFor="is_leave_day" className="ml-2 text-sm text-gray-300">
+                          İzinli Gün
+                        </label>
+                      </div>
+                    </div>
+                    
+                    <div className="pt-4 flex gap-3">
+                      {editMode && (
+                        <button 
+                          type="button" 
+                          onClick={handleCancelEdit}
+                          className="w-1/2 px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white font-medium rounded-lg transition-colors"
+                        >
+                          İptal
+                        </button>
+                      )}
+                      <button 
+                        type="submit" 
+                        className={`${editMode ? 'w-1/2' : 'w-full'} px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white font-medium rounded-lg transition-colors`}
+                      >
+                        {editMode ? 'Güncelle' : 'İş Kaydı Ekle'}
+                      </button>
+                    </div>
+                  </form>
+                </div>
               </div>
             </div>
             
@@ -810,7 +1008,7 @@ export default function WorkLogsPage() {
                   </div>
                 </div>
                 
-                {/* İstatistikler */}
+                {/* İstatistikler ve Takvim */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div className="bg-gray-700/30 border border-gray-600/30 rounded-xl p-5">
                     <div className="flex flex-col space-y-4">
@@ -875,324 +1073,95 @@ export default function WorkLogsPage() {
                   </div>
                 </div>
                 
-                {/* Form ve liste */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                  {/* İş kaydı formu */}
-                  <div className="bg-gray-700/30 border border-gray-600/30 rounded-xl p-5" id="new-worklog-form">
-                    <h2 className="text-lg font-medium text-white mb-4">
-                      {editMode ? 'İş Kaydını Düzenle' : 'Yeni İş Kaydı Ekle'}
-                    </h2>
-                    
-                    <form onSubmit={handleSubmit} className="space-y-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-1">Tarih</label>
-                        <input
-                          type="date"
-                          name="date"
-                          value={formData.date}
-                          onChange={handleChange}
-                          className="w-full bg-gray-700 border border-gray-600 text-white rounded-lg px-3 py-2"
-                          required
-                        />
-                      </div>
-                      
-                      <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-1">Proje / Bölüm</label>
-                        <input
-                          type="text"
-                          name="project_code"
-                          value={formData.project_code}
-                          onChange={handleChange}
-                          placeholder="örn: SAFİR"
-                          className="w-full bg-gray-700 border border-gray-600 text-white rounded-lg px-3 py-2"
-                          required
-                        />
-                      </div>
-                      
-                      <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-1">Danışman</label>
-                        <input
-                          type="text"
-                          name="client_name"
-                          value={formData.client_name}
-                          onChange={handleChange}
-                          placeholder="Danışman adı girin"
-                          className="w-full bg-gray-700 border border-gray-600 text-white rounded-lg px-3 py-2"
-                          required
-                        />
-                      </div>
-                      
-                      <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-1">Kontak Kişi</label>
-                        <input
-                          type="text"
-                          name="contact_person"
-                          value={formData.contact_person}
-                          onChange={handleChange}
-                          placeholder="Kontak kişi girin"
-                          className="w-full bg-gray-700 border border-gray-600 text-white rounded-lg px-3 py-2"
-                        />
-                      </div>
-                      
-                      <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-1">Yapılan İş / Problem&Çözüm</label>
-                        <textarea
-                          name="description"
-                          value={formData.description}
-                          onChange={handleChange}
-                          placeholder="Yapılan işi açıklayın"
-                          className="w-full bg-gray-700 border border-gray-600 text-white rounded-lg px-3 py-2"
-                          rows={3}
-                          required
-                        ></textarea>
-                      </div>
-                      
-                      <div>
-                        <label htmlFor="duration" className="block text-sm font-medium text-gray-300 mb-1">Süre (Birim)</label>
-                        <div className="relative rounded-md">
-                          <input
-                            type="text"
-                            id="duration"
-                            name="duration"
-                            value={formData.duration}
-                            onChange={(e) => {
-                              let value = e.target.value;
-                              
-                              // Sadece sayılar ve nokta karakterine izin ver
-                              if (/^[0-9]*\.?[0-9]*$/.test(value) || value === '') {
-                                // Boş ise duration'ı boş string olarak ayarla
-                                if (value === '') {
-                                  setFormData({
-                                    ...formData,
-                                    duration: ''
-                                  });
-                                  return;
-                                }
-                                
-                                // Sayısal değer kontrolü
-                                const numValue = parseFloat(value);
-                                
-                                // Geçerli bir sayı ise ve 1'den küçük veya eşitse kaydet
-                                if (!isNaN(numValue) && numValue <= 1) {
-                                  setFormData({
-                                    ...formData,
-                                    duration: value
-                                  });
-                                }
-                              }
-                            }}
-                            onBlur={(e) => {
-                              // Input boş ise veya geçersiz bir değer ise minimum değere ayarla
-                              if (e.target.value === '' || isNaN(parseFloat(e.target.value))) {
-                                setFormData({
-                                  ...formData,
-                                  duration: '0.01'
-                                });
-                                return;
-                              }
-                              
-                              // Sayısal değere çevir
-                              let numValue = parseFloat(e.target.value);
-                              
-                              // 0.01'den küçükse minimum değere ayarla
-                              if (numValue < 0.01) numValue = 0.01;
-                              // 1'den büyükse maksimum değere ayarla
-                              if (numValue > 1) numValue = 1;
-                              
-                              // İki ondalık basamağa yuvarla ve string'e çevir
-                              const formattedValue = numValue.toFixed(2);
-                              
-                              setFormData({
-                                ...formData,
-                                duration: formattedValue
-                              });
-                            }}
-                            className="w-full bg-gray-700 border border-gray-600 text-white rounded-lg px-3 py-2"
-                            placeholder="Örn: 0.25, 0.50, 1.00"
-                            style={{ appearance: 'textfield', MozAppearance: 'textfield' }}
-                          />
-                          <div className="text-xs text-gray-400 mt-1">
-                            0.01 ile 1.00 arasında değerler girebilirsiniz (örn: 0.10, 0.25, 0.50, 0.75)
-                          </div>
-                        </div>
-                      </div>
-                      
-                      {/* Log Time ve İzinli Gün Alanları */}
-                      <div className="flex items-center space-x-6">
-                        <div className="flex items-center">
-                          <input
-                            type="checkbox"
-                            id="log_time"
-                            checked={formData.log_time}
-                            onChange={(e) => setFormData({ ...formData, log_time: e.target.checked })}
-                            className="w-4 h-4 text-purple-600 bg-gray-700 border-gray-600 rounded focus:ring-purple-500 focus:ring-2"
-                          />
-                          <label htmlFor="log_time" className="ml-2 text-sm text-gray-300">
+                {/* İş Kayıtları Listesi */}
+                <div className="bg-gray-700/30 border border-gray-600/30 rounded-xl overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-700/40">
+                      <thead className="bg-gray-800/50">
+                        <tr>
+                          <th scope="col" className="py-4 pl-6 pr-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider w-[120px]">
+                            Tarih
+                          </th>
+                          <th scope="col" className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                            Proje / Bölüm
+                          </th>
+                          <th scope="col" className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider w-[80px]">
+                            Süre
+                          </th>
+                          <th scope="col" className="px-6 py-4 text-center text-xs font-medium text-gray-400 uppercase tracking-wider w-[100px]">
                             Log Time
-                          </label>
-                        </div>
-
-                        <div className="flex items-center">
-                          <input
-                            type="checkbox"
-                            id="is_leave_day"
-                            checked={formData.is_leave_day}
-                            onChange={(e) => {
-                              const isLeaveDay = e.target.checked;
-                              setFormData({ 
-                                ...formData, 
-                                is_leave_day: isLeaveDay,
-                                project_code: isLeaveDay ? 'İZİN' : '',
-                                description: isLeaveDay ? 'İzinli Gün' : '',
-                                duration: '1.00',
-                                contact_person: ''
-                              });
-                            }}
-                            className="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500 focus:ring-2"
-                          />
-                          <label htmlFor="is_leave_day" className="ml-2 text-sm text-gray-300">
-                            İzinli Gün
-                          </label>
-                        </div>
-                      </div>
-                      
-                      <div className="pt-4 flex gap-3">
-                        {editMode && (
-                          <button 
-                            type="button" 
-                            onClick={handleCancelEdit}
-                            className="w-1/2 px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white font-medium rounded-lg transition-colors"
+                          </th>
+                          <th scope="col" className="px-6 py-4 text-right text-xs font-medium text-gray-400 uppercase tracking-wider w-[100px]">
+                            İşlemler
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-700/40">
+                        {workLogs.map((log, index) => (
+                          <tr 
+                            key={log.id} 
+                            className={`hover:bg-gray-700/20 transition-colors ${
+                              log.is_leave_day ? 'bg-blue-900/10' : 
+                              index % 2 === 0 ? 'bg-gray-800/30' : ''
+                            }`}
                           >
-                            İptal
-                          </button>
-                        )}
-                        <button 
-                          type="submit" 
-                          className={`${editMode ? 'w-1/2' : 'w-full'} px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white font-medium rounded-lg transition-colors`}
-                        >
-                          {editMode ? 'Güncelle' : 'İş Kaydı Ekle'}
-                        </button>
-                      </div>
-                    </form>
-                  </div>
-                  
-                  {/* İş kayıtları listesi */}
-                  <div className="bg-gray-700/30 border border-gray-600/30 rounded-xl p-5">
-                    <h2 className="text-lg font-medium text-white mb-4">İş Kayıtları</h2>
-                    
-                    {loadingLogs ? (
-                      <div className="flex justify-center items-center py-10">
-                        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-purple-500"></div>
-                      </div>
-                    ) : workLogs.length > 0 ? (
-                      <>
-                        {/* Masaüstü görünüm */}
-                        <div className="hidden md:block overflow-x-auto max-h-[400px] custom-scrollbar">
-                          <table className="w-full table-fixed">
-                            <thead className="bg-gray-800/70 sticky top-0">
-                              <tr>
-                                <th className="px-4 py-2 text-left text-xs font-medium text-gray-400 uppercase tracking-wider w-[100px]">Tarih</th>
-                                <th className="px-4 py-2 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Proje / Bölüm</th>
-                                <th className="px-4 py-2 text-left text-xs font-medium text-gray-400 uppercase tracking-wider w-[70px]">Süre</th>
-                                <th className="px-4 py-2 text-center text-xs font-medium text-gray-400 uppercase tracking-wider w-[70px]">Log Time</th>
-                                <th className="px-4 py-2 text-xs font-medium text-gray-400 uppercase tracking-wider text-center w-[100px]">İşlemler</th>
-                              </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-700/30">
-                              {workLogs.map((log) => {
-                                const duration = typeof log.duration === 'string' ? parseFloat(log.duration) : log.duration;
-                                const dailyDuration = Number(duration.toFixed(2));
-                                
-                                return (
-                                  <tr key={log.id} className="hover:bg-gray-700/20">
-                                    <td className="px-4 py-3 text-sm text-gray-200 w-[100px]">
-                                      {new Date(log.date).toLocaleDateString('tr-TR')}
-                                    </td>
-                                    <td className="px-4 py-3 text-sm">
-                                      <div className="text-white font-medium">{log.project_code}</div>
-                                      <div className="text-gray-400 text-xs truncate max-w-[180px]">{log.description}</div>
-                                    </td>
-                                    <td className="px-4 py-3 text-sm text-white w-[70px]">
-                                      {dailyDuration.toFixed(2)}
-                                    </td>
-                                    <td className="px-4 py-3 text-sm text-center w-[70px]">
-                                      {log.log_time ? (
-                                        <span className="text-green-400">✓</span>
-                                      ) : (
-                                        <span className="text-red-400">✗</span>
-                                      )}
-                                    </td>
-                                    <td className="px-4 py-3 text-center w-[100px]">
-                                      <div className="flex justify-center space-x-3">
-                                        <button 
-                                          onClick={() => handleEdit(log)}
-                                          className="bg-blue-500/20 hover:bg-blue-500/40 text-blue-400 rounded-md p-1.5 transition-colors"
-                                          title="Düzenle"
-                                        >
-                                          <i className="ri-edit-line"></i>
-                                        </button>
-                                        <button 
-                                          onClick={() => handleDelete(log.id)}
-                                          className="bg-red-500/20 hover:bg-red-500/40 text-red-400 rounded-md p-1.5 transition-colors"
-                                          title="Sil"
-                                        >
-                                          <i className="ri-delete-bin-line"></i>
-                                        </button>
-                                      </div>
-                                    </td>
-                                  </tr>
-                                );
-                              })}
-                            </tbody>
-                          </table>
-                        </div>
-                      
-                        {/* Mobil görünüm - kart tasarımı (tamamen yeniden düzenlendi) */}
-                        <div className="block md:hidden space-y-3 max-h-[400px] overflow-y-auto custom-scrollbar">
-                          {workLogs.map((log) => (
-                            <div key={log.id} className="bg-gray-800/50 rounded-lg p-4 border border-gray-700/30">
-                              <div className="flex justify-between items-start mb-2">
-                                <div className="text-sm text-gray-300 font-medium">{new Date(log.date).toLocaleDateString('tr-TR')}</div>
-                                <div className="flex space-x-2">
-                                  <button 
-                                    onClick={() => handleEdit(log)}
-                                    className="bg-blue-500/20 hover:bg-blue-500/40 text-blue-400 rounded-md p-1.5 transition-colors"
-                                  >
-                                    <i className="ri-edit-line text-sm"></i>
-                                  </button>
-                                  <button 
-                                    onClick={() => handleDelete(log.id)}
-                                    className="bg-red-500/20 hover:bg-red-500/40 text-red-400 rounded-md p-1.5 transition-colors"
-                                  >
-                                    <i className="ri-delete-bin-line text-sm"></i>
-                                  </button>
-                                </div>
+                            <td className="py-4 pl-6 pr-3 whitespace-nowrap w-[120px]">
+                              <div className="text-sm text-gray-200">
+                                {formatDate(log.date)}
                               </div>
-                              <div className="text-white font-medium mt-2">{log.project_code}</div>
-                              <div className="text-gray-400 text-sm my-2">{log.description}</div>
-                              <div className="flex justify-between items-center mt-3">
-                                <div className="text-white text-sm font-medium inline-block bg-gray-700/50 px-2 py-1 rounded">
-                                  {typeof log.duration === 'string' ? parseFloat(log.duration).toFixed(2) : log.duration.toFixed(2)} birim
-                                </div>
-                                <div className="flex items-center gap-1">
-                                  <span className="text-gray-400 text-sm">Log Time:</span>
-                                  {log.log_time ? (
-                                    <span className="text-green-400">✓</span>
-                                  ) : (
-                                    <span className="text-red-400">✗</span>
-                                  )}
-                                </div>
+                            </td>
+                            <td className="px-6 py-4">
+                              <div className="flex flex-col">
+                                <span className="text-sm font-medium text-white whitespace-nowrap">
+                                  {log.project_code}
+                                </span>
+                                {!log.is_leave_day && log.description && (
+                                  <span className="text-xs text-gray-400 mt-1 line-clamp-1">
+                                    {log.description}
+                                  </span>
+                                )}
                               </div>
-                            </div>
-                          ))}
-                        </div>
-                      </>
-                    ) : (
-                      <div className="bg-gray-800/30 text-center py-8 px-4 rounded-lg">
-                        <i className="ri-calendar-todo-line text-4xl text-gray-500 mb-2"></i>
-                        <p className="text-gray-400">Bu ay için henüz iş kaydı bulunmuyor.</p>
-                      </div>
-                    )}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap w-[80px]">
+                              <div className="text-sm text-gray-200">
+                                {log.duration}
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 text-center whitespace-nowrap w-[100px]">
+                              <div className="flex justify-center">
+                                {log.log_time ? (
+                                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                    <CheckIcon className="h-4 w-4 mr-1" />
+                                    Evet
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                    <XMarkIcon className="h-4 w-4 mr-1" />
+                                    Hayır
+                                  </span>
+                                )}
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 text-right whitespace-nowrap w-[100px]">
+                              <div className="flex justify-end items-center space-x-3">
+                                <button
+                                  onClick={() => handleEdit(log)}
+                                  className="text-blue-400 hover:text-blue-300 transition-colors"
+                                >
+                                  <PencilSquareIcon className="h-5 w-5" />
+                                </button>
+                                <button
+                                  onClick={() => handleDelete(log.id)}
+                                  className="text-red-400 hover:text-red-300 transition-colors"
+                                >
+                                  <TrashIcon className="h-5 w-5" />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
                 </div>
               </div>

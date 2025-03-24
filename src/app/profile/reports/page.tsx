@@ -369,161 +369,167 @@ export default function ReportsPage() {
               <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-xl p-6">
                 <h1 className="text-2xl font-bold text-white mb-6">Raporlar</h1>
                 
-                {/* Rapor kriterleri */}
-                <div className="bg-gray-700/30 border border-gray-600/30 rounded-xl p-5 mb-8">
-                  <h2 className="text-lg font-medium text-white mb-4">Rapor Kriterleri</h2>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="mb-6">
+                  <div className="flex justify-between items-center">
                     <div>
-                      <label className="block text-sm font-medium text-gray-300 mb-1">Rapor Türü</label>
-                      <select
-                        className="w-full bg-gray-700 border border-gray-600 text-white rounded-lg px-3 py-2"
-                        value={selectedReport}
-                        onChange={(e) => setSelectedReport(e.target.value)}
-                      >
-                        <option value="monthly">Aylık Rapor</option>
-                        <option value="project" disabled>Proje Bazlı Rapor (Yakında)</option>
-                        <option value="client" disabled>Müşteri Bazlı Rapor (Yakında)</option>
-                      </select>
+                      <h1 className="text-3xl font-bold text-white mb-2">Rapor Sistemi</h1>
+                      <p className="text-gray-400">Çalışma saatlerinizi ve projelerinizi raporlayın.</p>
                     </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-300 mb-1">Ay</label>
-                      <select
-                        className="w-full bg-gray-700 border border-gray-600 text-white rounded-lg px-3 py-2"
-                        value={selectedMonth}
-                        onChange={(e) => handleMonthYearChange(parseInt(e.target.value), selectedYear)}
-                      >
-                        {months.map((month, index) => (
-                          <option key={index} value={index + 1}>{month}</option>
-                        ))}
-                      </select>
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-300 mb-1">Yıl</label>
-                      <select
-                        className="w-full bg-gray-700 border border-gray-600 text-white rounded-lg px-3 py-2"
-                        value={selectedYear}
-                        onChange={(e) => handleMonthYearChange(selectedMonth, parseInt(e.target.value))}
-                      >
-                        {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i).map(year => (
-                          <option key={year} value={year}>{year}</option>
-                        ))}
-                      </select>
-                    </div>
+                    <button
+                      onClick={handleExportExcel}
+                      className="inline-flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors"
+                    >
+                      <i className="ri-file-excel-2-line mr-2"></i>
+                      Excel Olarak İndir
+                    </button>
                   </div>
                 </div>
-                
-                {/* Rapor Özeti */}
-                <div className="mb-6 bg-gray-800/40 border border-gray-700/40 rounded-xl p-6">
-                  <h2 className="text-xl text-white font-semibold mb-6">Rapor Özeti</h2>
-                  
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div className="bg-gray-800/60 p-4 rounded-lg">
-                      <div className="text-gray-400 text-sm mb-1">Toplam İş Günü</div>
-                      <div className="text-2xl font-bold text-white">{monthlyStats.totalDays}</div>
-                    </div>
+
+                <div className="space-y-8">
+                  {/* Ay/Yıl seçici */}
+                  <div className="bg-gray-700/30 border border-gray-600/30 rounded-xl p-5">
+                    <h2 className="text-lg font-medium text-white mb-4">Rapor Kriterleri</h2>
                     
-                    <div className="bg-gray-800/60 p-4 rounded-lg">
-                      <div className="text-gray-400 text-sm mb-1">Çalışılan Günler</div>
-                      <div className="text-2xl font-bold text-white">{monthlyStats.completedDays}</div>
-                    </div>
-                    
-                    <div className="bg-gray-800/60 p-4 rounded-lg">
-                      <div className="text-gray-400 text-sm mb-1">Toplam Çalışma</div>
-                      <div className="text-2xl font-bold text-white">{monthlyStats.totalDuration.toFixed(2)} <span className="text-sm text-gray-400">birim</span></div>
-                    </div>
-                    
-                    <div className="bg-gray-800/60 p-4 rounded-lg">
-                      <div className="text-gray-400 text-sm mb-1">Tamamlanma Oranı</div>
-                      <div className="text-2xl font-bold text-white">{monthlyStats.completionPercentage.toFixed(0)}%</div>
-                      <div className="w-full bg-gray-700 rounded-full h-2 mt-2">
-                        <div 
-                          className="bg-purple-500 h-2 rounded-full" 
-                          style={{ width: `${monthlyStats.completionPercentage > 100 ? 100 : monthlyStats.completionPercentage}%` }}
-                        ></div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-300 mb-1">Rapor Türü</label>
+                        <select
+                          className="w-full bg-gray-700 border border-gray-600 text-white rounded-lg px-3 py-2"
+                          value={selectedReport}
+                          onChange={(e) => setSelectedReport(e.target.value)}
+                        >
+                          <option value="monthly">Aylık Rapor</option>
+                          <option value="project" disabled>Proje Bazlı Rapor (Yakında)</option>
+                          <option value="client" disabled>Müşteri Bazlı Rapor (Yakında)</option>
+                        </select>
                       </div>
-                    </div>
-                  </div>
-                  
-                  <div className="mt-4 pt-4 border-t border-gray-700/30">
-                    <div className="flex justify-between items-center">
-                      <div className="text-sm text-gray-400">Tarih Aralığı</div>
-                      <div className="text-sm text-white">
-                        {startDate && endDate ? (
-                          <>
-                            {new Date(startDate).toLocaleDateString('tr-TR')} - {new Date(endDate).toLocaleDateString('tr-TR')}
-                          </>
-                        ) : (
-                          <span className="text-gray-500">Tarih aralığı seçilmedi</span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                
-                {/* Rapor İçeriği */}
-                <div className="relative overflow-x-auto mt-6 bg-gray-800/50 border border-gray-700/50 rounded-xl p-6">
-                  <h3 className="text-xl font-semibold text-white mb-4">Rapor İçeriği</h3>
-                  
-                  {loadingReport ? (
-                    <div className="flex justify-center items-center py-10">
-                      <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-purple-500"></div>
-                    </div>
-                  ) : reportData.length > 0 ? (
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-sm text-left text-gray-300">
-                        <thead className="text-xs text-gray-400 uppercase bg-gray-700/50">
-                          <tr>
-                            <th scope="col" className="px-4 py-3">Tarih</th>
-                            <th scope="col" className="px-4 py-3">Danışman</th>
-                            <th scope="col" className="px-4 py-3">Yapılan İş / Problem&Çözüm</th>
-                            <th scope="col" className="px-4 py-3">Süre</th>
-                            <th scope="col" className="px-4 py-3">Proje / Bölüm</th>
-                            <th scope="col" className="px-4 py-3">Kontak Kişi</th>
-                            <th scope="col" className="px-4 py-3">Log Time</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {reportData.map((log) => (
-                            <tr key={log.id} className="border-b border-gray-700/30 hover:bg-gray-700/20">
-                              <td className="px-4 py-3">{new Date(log.date).toLocaleDateString('tr-TR')}</td>
-                              <td className="px-4 py-3">{user?.full_name || ''}</td>
-                              <td className="px-4 py-3">{log.description}</td>
-                              <td className="px-4 py-3">{parseFloat(String(log.duration)).toFixed(2)}</td>
-                              <td className="px-4 py-3">{log.project_code}</td>
-                              <td className="px-4 py-3">{log.contact_person || ''}</td>
-                              <td className="px-4 py-3">
-                                {log.log_time ? (
-                                  <span className="text-green-400">✓</span>
-                                ) : (
-                                  <span className="text-red-400">✗</span>
-                                )}
-                              </td>
-                            </tr>
+                      
+                      <div>
+                        <label className="block text-sm font-medium text-gray-300 mb-1">Ay</label>
+                        <select
+                          className="w-full bg-gray-700 border border-gray-600 text-white rounded-lg px-3 py-2"
+                          value={selectedMonth}
+                          onChange={(e) => handleMonthYearChange(parseInt(e.target.value), selectedYear)}
+                        >
+                          {months.map((month, index) => (
+                            <option key={index} value={index + 1}>{month}</option>
                           ))}
-                        </tbody>
-                      </table>
+                        </select>
+                      </div>
+                      
+                      <div>
+                        <label className="block text-sm font-medium text-gray-300 mb-1">Yıl</label>
+                        <select
+                          className="w-full bg-gray-700 border border-gray-600 text-white rounded-lg px-3 py-2"
+                          value={selectedYear}
+                          onChange={(e) => handleMonthYearChange(selectedMonth, parseInt(e.target.value))}
+                        >
+                          {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i).map(year => (
+                            <option key={year} value={year}>{year}</option>
+                          ))}
+                        </select>
+                      </div>
                     </div>
-                  ) : (
-                    <div className="py-8 text-center bg-gray-800/30 rounded-lg">
-                      <i className="ri-file-text-line text-4xl text-gray-500 mb-2"></i>
-                      <p className="text-gray-400">Seçilen ay için rapor verisi bulunamadı.</p>
-                    </div>
-                  )}
+                  </div>
                   
-                  {reportData.length > 0 && (
-                    <div className="mt-6 flex justify-end">
-                      <button
-                        onClick={handleExportExcel}
-                        className="flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors"
-                      >
-                        <i className="ri-file-excel-2-line mr-2"></i>
-                        Excel Olarak İndir
-                      </button>
+                  {/* Rapor Özeti */}
+                  <div className="mb-6 bg-gray-800/40 border border-gray-700/40 rounded-xl p-6">
+                    <h2 className="text-xl text-white font-semibold mb-6">Rapor Özeti</h2>
+                    
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div className="bg-gray-800/60 p-4 rounded-lg">
+                        <div className="text-gray-400 text-sm mb-1">Toplam İş Günü</div>
+                        <div className="text-2xl font-bold text-white">{monthlyStats.totalDays}</div>
+                      </div>
+                      
+                      <div className="bg-gray-800/60 p-4 rounded-lg">
+                        <div className="text-gray-400 text-sm mb-1">Çalışılan Günler</div>
+                        <div className="text-2xl font-bold text-white">{monthlyStats.completedDays}</div>
+                      </div>
+                      
+                      <div className="bg-gray-800/60 p-4 rounded-lg">
+                        <div className="text-gray-400 text-sm mb-1">Toplam Çalışma</div>
+                        <div className="text-2xl font-bold text-white">{monthlyStats.totalDuration.toFixed(2)} <span className="text-sm text-gray-400">birim</span></div>
+                      </div>
+                      
+                      <div className="bg-gray-800/60 p-4 rounded-lg">
+                        <div className="text-gray-400 text-sm mb-1">Tamamlanma Oranı</div>
+                        <div className="text-2xl font-bold text-white">{monthlyStats.completionPercentage.toFixed(0)}%</div>
+                        <div className="w-full bg-gray-700 rounded-full h-2 mt-2">
+                          <div 
+                            className="bg-purple-500 h-2 rounded-full" 
+                            style={{ width: `${monthlyStats.completionPercentage > 100 ? 100 : monthlyStats.completionPercentage}%` }}
+                          ></div>
+                        </div>
+                      </div>
                     </div>
-                  )}
+                    
+                    <div className="mt-4 pt-4 border-t border-gray-700/30">
+                      <div className="flex justify-between items-center">
+                        <div className="text-sm text-gray-400">Tarih Aralığı</div>
+                        <div className="text-sm text-white">
+                          {startDate && endDate ? (
+                            <>
+                              {new Date(startDate).toLocaleDateString('tr-TR')} - {new Date(endDate).toLocaleDateString('tr-TR')}
+                            </>
+                          ) : (
+                            <span className="text-gray-500">Tarih aralığı seçilmedi</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Rapor İçeriği */}
+                  <div className="relative overflow-x-auto mt-6 bg-gray-800/50 border border-gray-700/50 rounded-xl p-6">
+                    <h3 className="text-xl font-semibold text-white mb-4">Rapor İçeriği</h3>
+                    
+                    {loadingReport ? (
+                      <div className="flex justify-center items-center py-10">
+                        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-purple-500"></div>
+                      </div>
+                    ) : reportData.length > 0 ? (
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm text-left text-gray-300">
+                          <thead className="text-xs text-gray-400 uppercase bg-gray-700/50">
+                            <tr>
+                              <th scope="col" className="px-4 py-3">Tarih</th>
+                              <th scope="col" className="px-4 py-3">Danışman</th>
+                              <th scope="col" className="px-4 py-3">Yapılan İş / Problem&Çözüm</th>
+                              <th scope="col" className="px-4 py-3">Süre</th>
+                              <th scope="col" className="px-4 py-3">Proje / Bölüm</th>
+                              <th scope="col" className="px-4 py-3">Kontak Kişi</th>
+                              <th scope="col" className="px-4 py-3">Log Time</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {reportData.map((log) => (
+                              <tr key={log.id} className="border-b border-gray-700/30 hover:bg-gray-700/20">
+                                <td className="px-4 py-3">{new Date(log.date).toLocaleDateString('tr-TR')}</td>
+                                <td className="px-4 py-3">{user?.full_name || ''}</td>
+                                <td className="px-4 py-3">{log.description}</td>
+                                <td className="px-4 py-3">{parseFloat(String(log.duration)).toFixed(2)}</td>
+                                <td className="px-4 py-3">{log.project_code}</td>
+                                <td className="px-4 py-3">{log.contact_person || ''}</td>
+                                <td className="px-4 py-3">
+                                  {log.log_time ? (
+                                    <span className="text-green-400">✓</span>
+                                  ) : (
+                                    <span className="text-red-400">✗</span>
+                                  )}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : (
+                      <div className="py-8 text-center bg-gray-800/30 rounded-lg">
+                        <i className="ri-file-text-line text-4xl text-gray-500 mb-2"></i>
+                        <p className="text-gray-400">Seçilen ay için rapor verisi bulunamadı.</p>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
