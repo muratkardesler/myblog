@@ -268,13 +268,21 @@ export default function ReportsPage() {
         'Tarih': new Date(log.date).toLocaleDateString('tr-TR'),
         'Danışman': user?.full_name || '',
         'Yapılan İş / Problem&Çözüm': log.description,
-        'Süre': parseFloat(String(log.duration)).toFixed(2),
+        'Süre': log.duration,
         'Proje / Bölüm': log.project_code,
         'Kontak Kişi': log.contact_person || '',
         'Log Time': log.log_time ? '✓' : '✗'
       }));
       
       const detailsSheet = XLSX.utils.json_to_sheet(excelData);
+      
+      // Başlıkları kalın yap
+      const range = XLSX.utils.decode_range(detailsSheet['!ref'] || 'A1');
+      for (let C = range.s.c; C <= range.e.c; ++C) {
+        const address = XLSX.utils.encode_cell({ r: 0, c: C });
+        if (!detailsSheet[address]) continue;
+        detailsSheet[address].s = { font: { bold: true, sz: 12 } };
+      }
       
       // Sütun genişliklerini ayarla
       const wscols = [
@@ -508,7 +516,7 @@ export default function ReportsPage() {
                                 <td className="px-4 py-3">{new Date(log.date).toLocaleDateString('tr-TR')}</td>
                                 <td className="px-4 py-3">{user?.full_name || ''}</td>
                                 <td className="px-4 py-3">{log.description}</td>
-                                <td className="px-4 py-3">{parseFloat(String(log.duration)).toFixed(2)}</td>
+                                <td className="px-4 py-3">{log.duration}</td>
                                 <td className="px-4 py-3">{log.project_code}</td>
                                 <td className="px-4 py-3">{log.contact_person || ''}</td>
                                 <td className="px-4 py-3">

@@ -1124,7 +1124,7 @@ export default function WorkLogsPage() {
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap w-[80px]">
                               <div className="text-sm text-gray-200">
-                                {log.duration}
+                                {log.duration.toString().replace('.', ',')}
                               </div>
                             </td>
                             <td className="px-6 py-4 text-center whitespace-nowrap w-[100px]">
