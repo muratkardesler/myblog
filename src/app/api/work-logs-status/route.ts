@@ -1,16 +1,19 @@
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
-import { cookies } from 'next/headers';
-import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
+import { NextResponse } from 'next/server';
 
 // Bir gün içerisinde girilmesi gereken minimum iş kaydı süresi
 const MIN_WORK_DURATION = 1.0; // 1 saat
 
-export async function GET(request: NextRequest) {
+export const dynamic = 'force-dynamic';
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
+
+export async function GET(request: Request) {
   try {
-    // Supabase client
-    const supabase = createRouteHandlerClient({ cookies });
-    
-    // API anahtar kontrolü
+    // API key kontrolü
     const authHeader = request.headers.get('authorization');
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return NextResponse.json(
@@ -19,118 +22,96 @@ export async function GET(request: NextRequest) {
       );
     }
     
-    const apiKey = authHeader.split(' ')[1];
-    // Service role key'e eşit mi kontrol et
-    if (apiKey !== process.env.SUPABASE_SERVICE_ROLE_KEY) {
-      return NextResponse.json(
-        { error: 'Unauthorized: Invalid API key' },
-        { status: 401 }
-      );
-    }
+    // Bugünün tarihini al (UTC)
+    const now = new Date();
     
-    // URL'den tarih parametresini al (varsayılan: bugün)
-    const url = new URL(request.url);
-    const dateParam = url.searchParams.get('date');
-    const checkDate = dateParam ? new Date(dateParam) : new Date();
+    // Bugünün başlangıcını Türkiye saatine göre hesapla (UTC+3)
+    const today = new Date(Date.UTC(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate(),
+      21,
+      0,
+      0
+    ));
     
-    // Tarih geçerli mi kontrol et
-    if (isNaN(checkDate.getTime())) {
-      return NextResponse.json(
-        { error: 'Invalid date format' },
-        { status: 400 }
-      );
-    }
+    const formattedDate = today.toISOString();
     
-    // Formatlı tarih (YYYY-MM-DD)
-    const formattedDate = checkDate.toISOString().split('T')[0];
-    
-    // Sadece aktif kullanıcıları getir
+    // Debug için tarihleri logla
+    console.log('Şu anki tarih:', now);
+    console.log('Sorgulanacak tarih:', formattedDate);
+
+    // Bugünün hafta sonu olup olmadığını kontrol et
+    const isWeekend = now.getDay() === 0 || now.getDay() === 6;
+
+    // Tüm aktif kullanıcıları getir
     const { data: users, error: usersError } = await supabase
       .from('users')
-      .select('*')
+      .select('id, email, full_name')
       .eq('is_active', true);
-      
+
     if (usersError) {
-      console.error('Kullanıcılar alınırken hata:', usersError);
-      return NextResponse.json(
-        { error: 'Failed to fetch users' },
-        { status: 500 }
-      );
+      console.error('Kullanıcılar getirilirken hata:', usersError);
+      throw usersError;
     }
-    
-    // Haftasonu ise tüm kullanıcılar için true döndür
-    const dayOfWeek = checkDate.getDay(); // 0: Pazar, 6: Cumartesi
-    if (dayOfWeek === 0 || dayOfWeek === 6) {
-      // Hafta sonu
-      const allComplete = users.map(user => ({
-        id: user.id,
+
+    // Bugün iş kaydı girmiş kullanıcıları getir
+    const { data: workLogs, error: workLogsError } = await supabase
+      .from('work_logs')
+      .select('user_id, duration')
+      .eq('date', formattedDate);
+
+    if (workLogsError) {
+      console.error('İş kayıtları getirilirken hata:', workLogsError);
+      throw workLogsError;
+    }
+
+    // Debug için verileri logla
+    console.log('Aktif kullanıcılar:', users?.length);
+    console.log('İş kayıtları:', workLogs?.length);
+    console.log('Aktif kullanıcı listesi:', users);
+    console.log('İş kayıtları listesi:', workLogs);
+
+    // Her kullanıcının toplam süresini hesapla
+    const userTotals = new Map();
+    workLogs?.forEach(log => {
+      const currentTotal = userTotals.get(log.user_id) || 0;
+      userTotals.set(log.user_id, currentTotal + parseFloat(String(log.duration)));
+    });
+
+    // Debug için toplam süreleri logla
+    console.log('Kullanıcı toplam süreleri:', Object.fromEntries(userTotals));
+
+    // İş kaydı eksik olan kullanıcıları bul
+    const results = users
+      .filter(user => {
+        const totalDuration = userTotals.get(user.id) || 0;
+        return totalDuration < 1;
+      })
+      .map(user => ({
+        user_id: user.id,
         email: user.email,
         full_name: user.full_name,
-        is_complete: true, // Hafta sonu olduğu için tam sayılır
-        total_duration: 0
+        total_duration: userTotals.get(user.id) || 0
       }));
-      
-      return NextResponse.json({
-        date: formattedDate,
-        is_weekend: true,
-        results: allComplete,
-        all_complete: true
-      });
-    }
-    
-    // Tüm kullanıcıların bu tarihteki iş kayıtlarını kontrol et
-    const results = await Promise.all(
-      users.map(async (user) => {
-        const { data: workLogs, error: logsError } = await supabase
-          .from('work_logs')
-          .select('duration')
-          .eq('user_id', user.id)
-          .eq('date', formattedDate);
-          
-        if (logsError) {
-          console.error(`${user.id} kullanıcısının iş kayıtları alınırken hata:`, logsError);
-          return {
-            id: user.id,
-            email: user.email,
-            full_name: user.full_name,
-            is_complete: false,
-            total_duration: 0,
-            error: 'Failed to fetch work logs'
-          };
-        }
-        
-        // Toplam süreyi hesapla
-        const totalDuration = workLogs?.reduce((sum, log) => 
-          sum + parseFloat(String(log.duration)), 0) || 0;
-          
-        // İş kaydı tam mı kontrol et (minimum süreye ulaşıldı mı?)
-        const isComplete = totalDuration >= MIN_WORK_DURATION;
-        
-        return {
-          id: user.id,
-          email: user.email,
-          full_name: user.full_name,
-          is_complete: isComplete,
-          total_duration: totalDuration
-        };
-      })
-    );
-    
-    // Tüm kullanıcılar için sonuçları hazırla
-    const incompleteUsers = results.filter(user => !user.is_complete);
-    const allComplete = incompleteUsers.length === 0;
-    
+
+    // Tüm kullanıcıların iş kaydı tam mı kontrol et
+    const allComplete = users.length > 0 && users.every(user => {
+      const totalDuration = userTotals.get(user.id) || 0;
+      return totalDuration >= 1;
+    });
+
     return NextResponse.json({
       date: formattedDate,
-      is_weekend: false,
-      results,
+      is_weekend: isWeekend,
+      results: results,
       all_complete: allComplete
     });
-    
+
   } catch (error) {
-    console.error('Work logs check error:', error);
+    console.error('İş takibi durumu kontrol edilirken hata:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'İş takibi durumu kontrol edilirken bir hata oluştu.' },
       { status: 500 }
     );
   }
